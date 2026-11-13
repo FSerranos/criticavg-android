@@ -1,0 +1,29 @@
+{
+  "appId": "com.criticavg.app",
+  "appName": "Critic AVG",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#202227"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 600,
+      "backgroundColor": "#202227",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#202227",
+      "overlaysWebView": false
+    },
+    "BackgroundRunner": {
+      "label": "com.criticavg.app.check",
+      "src": "runners/runner.js",
+      "event": "checkAvailability",
+      "repeat": true,
+      "interval": 360,
+      "autoStart": true
+    }
+  }
+}

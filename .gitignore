@@ -1,0 +1,6 @@
+node_modules/
+android/
+www/
+*.keystore
+keystore-base64.txt
+GITHUB-SECRETS.txt
