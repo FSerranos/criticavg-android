@@ -272,6 +272,8 @@ select.mini{height:32px;border:1px solid var(--rule);border-radius:8px;backgroun
 .toast{position:fixed;left:50%;bottom:calc(20px + var(--safe-b));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:99px;font-size:14px;z-index:60}
 .toast[hidden]{display:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* phones: the whole search hint must fit */
+@media (max-width:480px){.search input,#searchSlot .search input{padding-right:12px;padding-left:46px}.search .ico,#searchSlot .search .ico{left:16px}.search input::placeholder{font-size:min(16px,3.9vw);letter-spacing:-.01em}}
 </style>
 </head>
 <body>
@@ -301,7 +303,7 @@ select.mini{height:32px;border:1px solid var(--rule);border-radius:8px;backgroun
   </div>
   <p class="demo" id="demoNote" hidden></p>
   <main id="main"></main>
-  <footer style="font-size:12px;color:var(--muted);padding:0 0 28px;max-width:70ch">This product uses the TMDB API but is not endorsed or certified by TMDB. Ratings belong to their respective sites; each source name links to the original page. <span id="ver">v2026-11-14.4</span></footer>
+  <footer style="font-size:12px;color:var(--muted);padding:0 0 28px;max-width:70ch">This product uses the TMDB API but is not endorsed or certified by TMDB. Ratings belong to their respective sites; each source name links to the original page. <span id="ver">v2026-11-14.5</span></footer>
 </div>
 
 <div class="scrim" id="scrim"></div>
@@ -663,7 +665,7 @@ function setupApp(){
 async function shareFilm(){
   if(!film) return;
   const c = compute();
-  const url = `${SITE_URL}/#film-${film.id}`;
+  const url = `${SITE_URL}/?film=${film.id}`;
   const text = t("shareText", film.title, film.year, c.avg == null ? "–" : c.avg.toFixed(1).replace(".", lang === "es" ? "," : "."));
   try{
     if(IS_APP && PLUG.Share){ await PLUG.Share.share({ title: film.title, text, url, dialogTitle: t("share") }); return; }
@@ -1114,6 +1116,12 @@ $("#saveApi").addEventListener("click", () => {
 
 /* ---- boot ---- */
 try{
+  // Shared links look like /?film=123: open that film, even in the installed app
+  const shared = new URLSearchParams(location.search).get("film");
+  if(/^\d+$/.test(shared || "")){
+    sessionStorage.setItem("launched", "1");
+    history.replaceState(null, "", location.pathname + "#film-" + shared);
+  }
   if(isInstalled() && !sessionStorage.getItem("launched")){
     sessionStorage.setItem("launched", "1");
     if(/^#film-/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
