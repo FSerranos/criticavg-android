@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Critic AVG</title>
+<meta name="theme-color" content="#202227">
+<meta name="description" content="Dozens of critics. Just one rating. IMDb, TMDB, Trakt, Letterboxd, MUBI, Rotten Tomatoes and Metacritic in one weighted average.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="favicon-96.png" type="image/png" sizes="96x96">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: dark;
+  --screen:#202227;   /* logo background */
+  --paper:#2A2C33;
+  --ink:#F4F4F6;
+  --muted:#A6A8B0;    /* logo tagline grey */
+  --rule:#3B3E47;
+  --gold:#F5A30C;     /* logo "AVG" gold: the overall score */
+  --critic:#3AA8E8;   /* logo blue: critics */
+  --crowd:#F0644F;    /* logo coral: audience */
+  --leader:#555963;
+  --display:"Montserrat", "Arial", sans-serif;
+  --text:"Instrument Sans", system-ui, sans-serif;
+  --r-lg:20px; --r-sm:8px;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--screen);color:var(--ink);font:400 16px/1.5 var(--text);-webkit-font-smoothing:antialiased;min-height:100vh;padding-top:var(--safe-t);padding-bottom:var(--safe-b)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:4px}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+/* ---------- top bar ---------- */
+.bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;grid-template-areas:"brand search list weights settings";align-items:center;gap:14px;padding:16px 0}
+.brand{grid-area:brand;display:flex;align-items:center;gap:12px;white-space:nowrap;text-decoration:none;min-width:0}
+.brand .emblem{width:44px;height:44px;border-radius:50%;display:block}
+.brand .emblem{flex:none}
+.brand .wordmark{height:26px;width:auto;max-width:100%;min-width:0;object-fit:contain;object-position:left center;display:block}
+.bar .search{grid-area:search}
+#openWeights{grid-area:weights}
+#openList{grid-area:list;position:relative}
+#openList .count{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:99px;background:var(--gold);color:#1B1C20;font:700 12px/20px var(--text);text-align:center}
+#openSettings{grid-area:settings}
+@media (max-width:900px){
+  .bar{grid-template-columns:minmax(0,1fr) auto auto auto;grid-template-areas:"brand list weights settings" "search search search search";row-gap:18px;padding:18px 0 8px}
+  .brand .emblem{width:52px;height:52px}
+  .brand .wordmark{height:auto;max-height:30px}
+  .bar{column-gap:12px}
+  .bar .iconbtn{width:52px;height:52px;padding:0}
+  .bar .iconbtn .lbl{display:none}
+  .search input{height:58px;font-size:17px;padding-left:52px}
+  .search .ico{left:20px;width:20px;height:20px}
+}
+.brand svg{width:26px;height:26px}
+.search{position:relative;flex:1}
+.search input{width:100%;height:46px;border:1px solid #d6d6d6;background:#d6d6d6;color:#424242;border-radius:999px;padding:0 18px 0 44px;font-size:16px}
+.search input::placeholder{color:#424242;opacity:1}
+.search input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;width:18px;height:18px;margin-right:4px;cursor:pointer;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23424242' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E") center/contain no-repeat}
+.search .ico{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:#424242;z-index:1}
+.results{position:absolute;left:0;right:0;top:52px;background:var(--paper);border:1px solid var(--rule);border-radius:16px;padding:6px;z-index:20;max-height:60vh;overflow:auto;box-shadow:0 18px 40px -12px rgba(0,0,0,.6)}
+.results[hidden]{display:none}
+.res{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:8px;border-radius:10px;cursor:pointer}
+.res:hover,.res[aria-selected="true"]{background:var(--screen)}
+.res img,.res .ph{width:36px;height:54px;border-radius:4px;object-fit:cover;background:var(--rule);flex:none}
+.res b{font-weight:600}
+.res small{color:var(--muted);display:block}
+.iconbtn{height:46px;min-width:46px;border-radius:999px;border:1px solid var(--rule);background:var(--paper);display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;cursor:pointer;font-weight:500}
+.iconbtn svg{width:18px;height:18px}
+.iconbtn.primary{background:var(--gold);color:#1B1C20;border-color:var(--gold);font-weight:600}
+
+
+.demo{font-size:14px;color:var(--muted);padding:0 0 8px}
+.demo b{color:var(--ink);font-weight:600}
+.demo button{background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;color:var(--ink)}
+
+/* ---------- film header ---------- */
+.film{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:end;padding:18px 0 8px}
+.poster{width:112px;aspect-ratio:2/3;border-radius:var(--r-sm);background:linear-gradient(160deg,#2A2F39,#1B1F27);overflow:hidden;position:relative}
+.poster img{width:100%;height:100%;object-fit:cover;display:block}
+.poster .ph{position:absolute;inset:0;display:grid;place-items:center;font:800 40px var(--display);color:rgba(255,255,255,.55)}
+.film h1{font:800 clamp(32px,5.4vw,58px)/1.02 var(--display);margin:0;letter-spacing:-.02em;text-wrap:balance}
+.film .orig{color:var(--muted);margin:6px 0 0;font-size:15px}
+.facts{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:15px;color:var(--muted)}
+.facts strong{color:var(--ink);font-weight:500}
+
+/* ---------- main grid ---------- */
+.grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;padding:16px 0 48px}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--paper);border-radius:var(--r-lg);padding:22px}
+.panel h2{font:700 20px/1.2 var(--display);margin:0 0 4px;letter-spacing:-.005em}
+.panel .sub{color:var(--muted);font-size:14px;margin:0 0 16px;max-width:60ch}
+
+/* ---------- leader score ---------- */
+.scorewrap{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center}
+@media (max-width:520px){.scorewrap{grid-template-columns:1fr;justify-items:center;text-align:center}}
+.leader{width:min(260px,70vw);aspect-ratio:1;position:relative}
+.leader svg{width:100%;height:100%;display:block}
+.leader .num{position:absolute;inset:0;display:grid;place-items:center;font:800 clamp(56px,14vw,82px)/1 var(--display);letter-spacing:-.04em}
+.leader .num small{display:block;font:600 14px var(--text);color:var(--muted);letter-spacing:0;text-align:center;margin-top:4px}
+.sweep{transition:stroke-dashoffset 1.2s cubic-bezier(.2,.7,.2,1)}
+@media (prefers-reduced-motion:reduce){.sweep{transition:none}}
+.verdict{font:800 26px/1.1 var(--display);margin:0 0 8px;color:var(--gold);letter-spacing:-.01em}
+.split{display:flex;gap:18px;flex-wrap:wrap;margin:12px 0 16px}
+.split div{font-size:14px;color:var(--muted)}
+.split b{display:block;font:800 26px/1 var(--display);color:var(--ink);letter-spacing:-.02em}
+.split .c b{color:var(--critic)} .split .a b{color:var(--crowd)}
+.coverage{font-size:14px;color:var(--muted)}
+.warn{margin:0 0 16px;padding:10px 14px;border-radius:10px;background:#3A1A21;color:#FFB4BD;font-size:14px}
+
+/* ---------- sources ---------- */
+.sources{list-style:none;margin:20px 0 0;padding:0;border-top:1px solid var(--rule)}
+.src{display:grid;grid-template-columns:minmax(118px,1.1fr) 2fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--rule)}
+.src .name{font-weight:600;line-height:1.2}
+.src .name a{text-decoration:none}
+.src .name a:hover{text-decoration:underline}
+.src .name small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.track{height:10px;background:var(--screen);border-radius:99px;overflow:hidden;position:relative}
+.fill{height:100%;border-radius:99px;transition:width .5s}
+.critics .fill{background:var(--critic)} .audience .fill{background:var(--crowd)}
+.src.off .track{background:repeating-linear-gradient(90deg,var(--screen) 0 6px,transparent 6px 10px);outline:1px dashed var(--rule)}
+.src .val{min-width:92px;text-align:right}
+.valbtn{display:block;padding:4px 6px;text-align:right}
+.valbtn b{font:700 19px/1 var(--display);letter-spacing:-.02em}
+.valbtn small{display:block;color:var(--muted);font-size:12px}
+.valbtn.empty b{font:500 14px var(--text);color:var(--muted)}
+.share{font-size:12px;color:var(--muted)}
+.loading b{color:var(--leader)}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--muted);margin-top:12px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+
+/* ---------- age ---------- */
+.side,.maincol{display:grid;gap:20px;align-content:start}
+/* Phones: score first, then age, synopsis, more data (with budget vs box office), where to watch, and all the sources last */
+@media (max-width:900px){
+  .maincol,.side{display:contents}
+  .p-score{order:1} .p-age{order:2} .p-syn{order:3} .p-more{order:4} .p-watch{order:5} .p-sources{order:6}
+}
+.regionrow{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:14px;color:var(--muted)}
+.regionrow select{height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);padding:0 8px;color:var(--ink)}
+.age{display:flex;gap:16px;align-items:center}
+.badge{min-width:76px;height:76px;padding:0 10px;border-radius:14px;border:3px solid var(--ink);display:grid;place-items:center;font:800 28px/1 var(--display)}
+.badge.none{border-style:dashed;border-color:var(--rule);color:var(--muted);font-size:20px}
+.age p{margin:0}
+.age .what{font-weight:600}
+.age .desc{color:var(--muted);font-size:14px}
+.others{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.chip{border:1px solid var(--rule);border-radius:99px;padding:3px 10px;font-size:13px;background:none;cursor:pointer}
+.chip b{font-weight:600}
+.note{font-size:13px;color:var(--muted);margin:14px 0 0}
+
+/* ---------- watch ---------- */
+.wgroup{margin-top:14px}
+.wgroup h3{font:600 14px var(--text);color:var(--muted);margin:0 0 8px}
+.provs{display:flex;flex-wrap:wrap;gap:8px}
+.prov{display:flex;align-items:center;gap:8px;border:1px solid var(--rule);border-radius:12px;padding:6px 10px 6px 6px;font-size:14px;text-decoration:none;background:var(--paper)}
+.prov img,.prov .pl{width:28px;height:28px;border-radius:7px;flex:none;object-fit:cover}
+.prov .pl{display:grid;place-items:center;background:var(--rule);color:var(--ink);font:700 13px var(--text)}
+.empty-watch{color:var(--muted);font-size:15px}
+.attrib{font-size:12px;color:var(--muted);margin-top:14px}
+
+/* ---------- empty state ---------- */
+.hello{padding:5vh 0 14vh;max-width:820px}
+.hello h1{font:800 clamp(34px,8.6vw,72px)/1.08 var(--display);margin:0 0 26px;letter-spacing:-.03em;text-wrap:balance}
+.hello .lead{font-size:clamp(21px,5.6vw,28px);line-height:1.3;color:#C9CBD1;max-width:34ch;margin:0 0 24px}
+.hello .body{font-size:clamp(17px,4.6vw,21px);line-height:1.45;color:#C9CBD1;max-width:46ch;margin:0 0 36px}
+.hello .gold{color:var(--gold);font-weight:700}
+#searchSlot{margin:0 0 30px;max-width:640px}
+#searchSlot .search input{height:58px;font-size:17px;padding-left:52px}
+#searchSlot .search .ico{left:20px;width:20px;height:20px}
+.bar.home{grid-template-areas:"brand . list weights settings"}
+@media (max-width:900px){ .bar.home{grid-template-areas:"brand list weights settings";padding-bottom:0} .bar .iconbtn{width:48px;height:48px} }
+.inline-link{background:none;border:0;padding:0;font:inherit;color:var(--gold);cursor:pointer}
+.inline-link:hover{text-decoration:underline}
+.try{display:flex;flex-wrap:wrap;gap:8px}
+.try button{border:1px solid var(--rule);background:var(--paper);border-radius:99px;padding:8px 16px;cursor:pointer}
+
+/* ---------- sheets (weights + settings) ---------- */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40;opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;z-index:50;background:var(--paper);display:flex;flex-direction:column;visibility:hidden;transition:transform .28s cubic-bezier(.2,.7,.2,1),visibility 0s linear .28s}
+.sheet.on{visibility:visible;transition:transform .28s cubic-bezier(.2,.7,.2,1),visibility 0s}
+@media (min-width:761px){.sheet{top:0;right:0;bottom:0;width:420px;transform:translateX(105%);border-radius:var(--r-lg) 0 0 var(--r-lg)}.sheet.on{transform:none}}
+@media (max-width:760px){.sheet{left:0;right:0;bottom:0;max-height:88vh;transform:translateY(105%);border-radius:var(--r-lg) var(--r-lg) 0 0;padding-bottom:var(--safe-b)}.sheet.on{transform:none}}
+@media (prefers-reduced-motion:reduce){.sheet,.scrim{transition:none}}
+.sheet header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 22px 8px}
+.sheet header .iconbtn.primary{white-space:nowrap;height:40px;font-size:14px;padding:0 16px;flex:none}
+.sheet header h2{font:800 24px/1.1 var(--display);margin:0;letter-spacing:-.01em}
+.sheet .body{overflow:auto;padding:4px 22px 22px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 18px}
+.presets button{border:1px solid var(--rule);background:var(--paper);border-radius:99px;padding:6px 14px;cursor:pointer;font-size:14px}
+.presets button[aria-pressed="true"]{background:var(--gold);color:#1B1C20;border-color:var(--gold)}
+.wrow{padding:12px 0;border-top:1px solid var(--rule)}
+.wrow label{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-weight:600}
+.wrow label span{font-weight:400;color:var(--muted);font-size:14px}
+.wrow label output{font:700 19px var(--display);min-width:52px;text-align:right}
+input[type=range]{width:100%;margin:8px 0 0;accent-color:var(--ink);height:28px}
+.wrow.critics input[type=range]{accent-color:var(--critic)}
+.wrow.audience input[type=range]{accent-color:var(--crowd)}
+.sumline{font-size:14px;color:var(--muted);margin:0 0 4px}
+.field{display:grid;gap:6px;margin-bottom:18px}
+.field label{font-weight:600}
+.field input{height:44px;border:1px solid var(--rule);border-radius:10px;padding:0 12px;background:var(--screen)}
+.field small{color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:99px;padding:3px}
+.seg button{border:0;background:none;border-radius:99px;padding:6px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--gold);color:#1B1C20}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.act{display:inline-flex;align-items:center;gap:8px;padding:8px 16px 8px 12px;border-radius:999px;border:1px solid var(--rule);background:none;color:var(--ink);font-weight:600;font-size:15px;cursor:pointer}
+.act svg{width:16px;height:16px}
+.act.on{border-color:var(--gold);color:var(--gold)}
+.offline-note{margin:12px 0 0;font-size:14px;color:var(--gold)}
+.trailer{display:inline-flex;align-items:center;gap:8px;padding:8px 16px 8px 12px;border-radius:999px;border:1px solid var(--gold);color:var(--gold);text-decoration:none;font-weight:600;font-size:15px}
+.trailer svg{width:16px;height:16px}
+.trailer:hover{background:rgba(245,163,12,.12)}
+.install{margin-top:40px;display:inline-flex;flex-direction:column;align-items:center}
+.field .install{margin-top:4px;align-items:flex-start}
+.install-row{display:flex;gap:12px}
+.inst{width:92px;height:84px;border-radius:16px;border:1px solid var(--rule);background:var(--paper);color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500}
+.inst svg{width:30px;height:30px}
+.inst:hover{color:var(--ink);border-color:var(--muted)}
+.install-label{margin:10px 0 0;font-size:14px;color:var(--muted);font-weight:500}
+.install-help{max-width:420px;margin:10px 0 0;font-size:14px;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:12px;padding:10px 14px}
+.panelhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.panelhead h2{margin:0}
+select.mini{height:32px;border:1px solid var(--rule);border-radius:8px;background:var(--screen);color:var(--ink);padding:0 8px;font-size:14px;max-width:55%}
+.age .what{font-weight:600;margin:0}
+.muted{color:var(--muted);font-weight:400}
+.synopsis{margin:10px 0 0;color:#D5D7DC;line-height:1.6;max-width:62ch}
+.facts-list{margin:12px 0 0;display:grid;gap:10px}
+.facts-list div{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:baseline}
+.facts-list dt{color:var(--muted);font-size:14px}
+.facts-list dd{margin:0;font-weight:500}
+.money{margin-top:22px;padding-top:18px;border-top:1px solid var(--rule)}
+.money h3{font:600 14px var(--text);color:var(--muted);margin:0 0 12px}
+.mrow{margin-bottom:12px}
+.mlab{display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px}
+.mlab span{color:var(--muted)} .mlab b{font-weight:600}
+.mtrack{height:10px;background:var(--screen);border-radius:99px;overflow:hidden}
+.mfill{height:100%;border-radius:99px;transition:width .5s}
+.mfill.b{background:#8E929C} .mfill.r{background:var(--gold)}
+.mratio{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.picons{display:flex;flex-wrap:wrap;gap:10px}
+.picon{width:52px;height:52px;border-radius:12px;overflow:hidden;display:block;border:1px solid var(--rule);text-decoration:none;color:var(--ink)}
+.picon img,.picon .pl{width:100%;height:100%;object-fit:cover;display:grid;place-items:center}
+.picon:hover{border-color:var(--gold)}
+.listpage{padding:4vh 0 10vh;max-width:760px}
+.listpage h1{font:800 clamp(30px,7vw,52px)/1.1 var(--display);margin:0 0 16px;letter-spacing:-.02em}
+.lead-s{font-size:18px;color:#C9CBD1;max-width:52ch;margin:0 0 20px}
+.sub-h{font:700 18px var(--display);margin:28px 0 10px}
+.mylist{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:10px}
+.mylist li{display:flex;align-items:center;gap:8px;background:var(--paper);border-radius:16px;padding:10px}
+.li-main{flex:1;display:flex;align-items:center;gap:14px;text-decoration:none;color:var(--ink);min-width:0}
+.li-poster{position:relative;width:48px;height:72px;border-radius:8px;overflow:hidden;background:var(--rule);flex:none;display:grid;place-items:center}
+.li-poster img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.li-poster i{font:800 20px var(--display);font-style:normal;color:var(--muted)}
+.li-text{display:grid;gap:2px;min-width:0}
+.li-text b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-text small{color:var(--muted)}
+.fresh{display:inline-block;margin-top:4px;padding:2px 10px;border-radius:99px;background:rgba(245,163,12,.15);color:var(--gold);font-size:13px;font-weight:600}
+.li-score{margin-left:auto;font:800 22px var(--display);color:var(--gold);padding:0 6px}
+.li-del{width:40px;height:40px;border-radius:50%;border:1px solid var(--rule);background:none;color:var(--muted);cursor:pointer;flex:none}
+.toast{position:fixed;left:50%;bottom:calc(20px + var(--safe-b));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:99px;font-size:14px;z-index:60}
+.toast[hidden]{display:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* phones: the whole search hint must fit */
+@media (max-width:480px){.search input,#searchSlot .search input{padding-right:12px;padding-left:46px}.search .ico,#searchSlot .search .ico{left:16px}.search input::placeholder{font-size:min(16px,3.9vw);letter-spacing:-.01em}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <a class="brand" href="#" aria-label="Critic AVG, home">
+      <img class="emblem" src="emblem-96.jpg" alt="" width="52" height="52">
+      <img class="wordmark" src="wordmark.jpg" alt="Critic AVG" width="206" height="30">
+    </a>
+    <div class="search" role="combobox" aria-haspopup="listbox" aria-owns="results">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <label class="sr" for="q" data-i="searchLabel">Buscar película</label>
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Buscar película" data-ph="searchPh" aria-controls="results">
+      <div class="results" id="results" role="listbox" hidden></div>
+    </div>
+    <button class="iconbtn" id="openList" aria-label="Mi lista" data-al="myList">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>
+      <span class="count" id="listCount" hidden></span>
+    </button>
+    <button class="iconbtn primary" id="openWeights" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+      <span class="lbl" data-i="weights">Pesos</span>
+    </button>
+    <button class="iconbtn" id="openSettings" aria-haspopup="dialog" aria-label="Ajustes" data-al="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </div>
+  <p class="demo" id="demoNote" hidden></p>
+  <main id="main"></main>
+  <footer style="font-size:12px;color:var(--muted);padding:0 0 28px;max-width:70ch">This product uses the TMDB API but is not endorsed or certified by TMDB. Ratings belong to their respective sites; each source name links to the original page. <span id="ver">v2026-11-14.5</span></footer>
+</div>
+
+<div class="scrim" id="scrim"></div>
+
+<section class="sheet" id="weightsSheet" role="dialog" aria-modal="true" aria-labelledby="wTitle" aria-hidden="true">
+  <header><h2 id="wTitle" data-i="weightsTitle">Pesos de la media</h2><button class="iconbtn primary" data-close data-i="applyWeights">Aplicar porcentajes</button></header>
+  <div class="body">
+    <p class="sumline" data-i="weightsHelp">Mueve cada fuente según cuánto te fías de ella. Los porcentajes se reparten solo entre las fuentes que tienen nota.</p>
+    <div class="presets" id="presets"></div>
+    <div id="wrows"></div>
+  </div>
+</section>
+
+<section class="sheet" id="settingsSheet" role="dialog" aria-modal="true" aria-labelledby="sTitle" aria-hidden="true">
+  <header><h2 id="sTitle" data-i="settings">Ajustes</h2><button class="iconbtn" data-close aria-label="Cerrar" data-al="close">✕</button></header>
+  <div class="body">
+    <div class="field">
+      <label data-i="language">Idioma</label>
+      <div class="seg" id="langSeg"><button data-lang="es">Español</button><button data-lang="en">English</button></div>
+    </div>
+    <div class="field">
+      <label for="apiUrl" data-i="apiUrl">Dirección del servidor de datos</label>
+      <input id="apiUrl" type="url" inputmode="url" placeholder="https://cinescore-api.tu-cuenta.workers.dev">
+      <small data-i="apiHelp">Déjalo vacío para usar los datos de ejemplo. Con tu servidor desplegado, las notas, edades y plataformas son reales.</small>
+    </div>
+    <button class="iconbtn primary" id="saveApi" data-i="saveApi">Guardar servidor</button>
+    <div class="field" style="margin-top:26px"><label data-i="installApp">Instalar app</label><div id="installSettings"></div></div>
+  </div>
+</section>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+"use strict";
+
+/* ================= config ================= */
+const IMG = "https://image.tmdb.org/t/p/";
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem("cs."+k); return v==null ? d : JSON.parse(v); }catch(_){ return d; } },
+  set(k, v){ try{ localStorage.setItem("cs."+k, JSON.stringify(v)); }catch(_){} }
+};
+
+const SOURCES = [
+  { id:"imdb",           name:"IMDb",            group:"audience", scale:10,  fmt:v=>v.toFixed(1), unit:"/10",  home:"https://www.imdb.com/", fallback:true },
+  { id:"tmdb",           name:"TMDB",            group:"audience", scale:10,  fmt:v=>v.toFixed(1), unit:"/10",  home:"https://www.themoviedb.org/" },
+  { id:"trakt",          name:"Trakt",           group:"audience", scale:10,  fmt:v=>v.toFixed(1), unit:"/10",  home:"https://trakt.tv/" },
+  { id:"mubi",           name:"MUBI",            group:"audience", scale:10,  fmt:v=>v.toFixed(1), unit:"/10",  home:"https://mubi.com/", scraped:true },
+  { id:"letterboxd",     name:"Letterboxd",      group:"audience", scale:5,   fmt:v=>v.toFixed(2), unit:"/5",   home:"https://letterboxd.com", scraped:true },
+  { id:"rottentomatoes", name:{es:"Rotten Tomatoes crítica", en:"Rotten Tomatoes critics"}, note:"Tomatometer", group:"critics", scale:100, fmt:v=>Math.round(v)+"%", unit:"", home:"https://www.rottentomatoes.com/" },
+  { id:"rtaudience",     name:{es:"Rotten Tomatoes público", en:"Rotten Tomatoes audience"}, note:"Popcornmeter", group:"audience", scale:100, fmt:v=>Math.round(v)+"%", unit:"", home:"https://www.rottentomatoes.com/", scraped:true },
+  { id:"metacritic",     name:{es:"Metacritic crítica", en:"Metacritic critics"}, note:"Metascore", group:"critics", scale:100, fmt:v=>String(Math.round(v)), unit:"/100", home:"https://www.metacritic.com/" },
+  { id:"mcusers",        name:{es:"Metacritic usuarios", en:"Metacritic users"}, note:"User Score", group:"audience", scale:10, fmt:v=>v.toFixed(1), unit:"/10", home:"https://www.metacritic.com/", scraped:true },
+  { id:"sensacine",      name:{es:"SensaCine medios", en:"SensaCine media"}, note:"Prensa, TV y radio", group:"critics", scale:5, fmt:v=>v.toFixed(1), unit:"/5", home:"https://www.sensacine.com/", scraped:true },
+  { id:"scusers",        name:{es:"SensaCine usuarios", en:"SensaCine users"}, note:"Público", group:"audience", scale:5, fmt:v=>v.toFixed(1), unit:"/5", home:"https://www.sensacine.com/", fromSource:"sensacine" },
+];
+
+const PRESETS = {
+  balanced:  { imdb:15, tmdb:5,  trakt:5,  mubi:10, letterboxd:15, rottentomatoes:10, rtaudience:10, metacritic:15, mcusers:5,  sensacine:5,  scusers:5 },
+  equal:     { imdb:10, tmdb:10, trakt:10, mubi:10, letterboxd:10, rottentomatoes:10, rtaudience:10, metacritic:10, mcusers:10, sensacine:10, scusers:10 },
+  critics:   { imdb:5,  tmdb:0,  trakt:0,  mubi:0,  letterboxd:10, rottentomatoes:30, rtaudience:0,  metacritic:35, mcusers:0,  sensacine:20, scusers:0 },
+  audience:  { imdb:20, tmdb:10, trakt:10, mubi:10, letterboxd:15, rottentomatoes:0,  rtaudience:10, metacritic:0,  mcusers:10, sensacine:0,  scusers:15 },
+  cinephile: { imdb:10, tmdb:0,  trakt:5,  mubi:15, letterboxd:30, rottentomatoes:10, rtaudience:5,  metacritic:15, mcusers:5,  sensacine:5,  scusers:0 },
+  spain:     { imdb:15, tmdb:0,  trakt:0,  mubi:5,  letterboxd:10, rottentomatoes:10, rtaudience:0,  metacritic:10, mcusers:0,  sensacine:25, scusers:25 },
+};
+
+/* ================= i18n ================= */
+const T = {
+  es:{
+    searchLabel:"Buscar película", searchPh:"Busca una peli y si merece la pena.", weights:"Pesos", weightsTitle:"Pesos de la media", settings:"Ajustes", close:"Cerrar",
+    weightsHelp:"Mueve cada fuente según cuánto te fías de ella. Los porcentajes se reparten solo entre las fuentes que tienen nota.",
+    language:"Idioma", apiUrl:"Dirección del servidor de datos",
+    apiHelp:"Déjalo vacío para usar los datos de ejemplo. Con tu servidor desplegado, las notas, edades y plataformas son reales.",
+    saveApi:"Guardar servidor", saved:"Servidor guardado", cleared:"Usando datos de ejemplo",
+    p_balanced:"Equilibrado", p_equal:"Todas iguales", p_critics:"Crítica", p_audience:"Público", p_cinephile:"Cinéfilo", p_spain:"España",
+    critics:"Crítica", audience:"Público", average:"Nota Critic AVG", outOf:"de 10",
+    coverage:(n,t)=>`Calculada con ${n} de ${t} fuentes.`, noScore:"Sin notas suficientes",
+    sourcesH:"Fuentes", sourcesSub:"Todas las notas pasadas a escala de 10.",
+    weightShare:p=>`${p}% de la media`, unused:"No cuenta", noData:"Sin nota", add:"Añadir", loading:"Buscando…", manual:"a mano",
+    save:"Guardar", clear:"Quitar",
+    ageH:"Edad recomendada", region:"País", ageNone:"Sin calificación registrada para este país.",
+    ageNote:"PEGI califica videojuegos; las películas se califican en cada país (en España, el ICAA).",
+    otherCountries:"Otros países",
+    watchH:"Dónde verla", flatrate:"Suscripción", free:"Gratis", rent:"Alquiler", buy:"Compra",
+    watchNone:"No hay plataformas registradas en este país ahora mismo.", attrib:"Disponibilidad: datos de JustWatch vía TMDB.", openAll:"Ver todas las opciones",
+    helloH:"Decenas de críticas. Una sola puntuación.", helloSub:"¿Cansado de que cada web puntúe las películas de forma distinta?",
+    helloBody:'En <b class="gold">CRITIC AVG</b> nos lo hemos currado para obtener la puntuación más objetiva posible. ¡Y no solo eso! Desde <button class="inline-link" data-openweights>los filtros</button> podrás darle el peso que tú quieras a los críticos o a la audiencia. ¡Mira cómo cambia la valoración!',
+    tryThese:"Prueba con",
+    demo:'<b>Modo ejemplo.</b> Las notas que ves son ilustrativas. <button id="demoSet">Conecta tu servidor</button> para tener datos reales.',
+    verdicts:["Para olvidar","Floja","Irregular","Correcta","Buena","Muy buena","Imprescindible"],
+    min:"min", dir:"Dirección",
+    errSearch:"No se pudo buscar. Revisa la dirección del servidor en Ajustes.", errMovie:"No se pudo cargar la película. Inténtalo de nuevo.",
+    noResults:"Sin resultados para esa búsqueda.",
+    trending:"Esta semana:", myList:"Mi lista", addToList:"Añadir a mi lista", inList:"En mi lista", addedToList:"Añadida a Mi lista", removedFromList:"Quitada de Mi lista",
+    share:"Compartir", linkCopied:"Enlace copiado", shareText:(ti,y,sc)=>`${ti}${y ? " ("+y+")" : ""}: ${sc}/10 en Critic AVG`,
+    listEmpty:"Todavía no has guardado ninguna película. Abre una y pulsa «Añadir a mi lista».", remove:"Quitar",
+    newOn:x=>`Ya en ${x}`, newOnPlatforms:n=>n === 1 ? "Una película de tu lista ya está en streaming" : `${n} películas de tu lista ya están en streaming`,
+    alertsOnApp:"Te avisaremos cuando una película de tu lista llegue a una plataforma de streaming.", alertsOnWeb:"Las novedades de streaming se marcan aquí cada vez que abres Mi lista. Con la app de Android, además, te llega un aviso.",
+    offlineTitle:"Sin conexión", offlineBody:"No hay internet ahora mismo. Puedes ver Mi lista y las últimas películas que abriste.", recentSaved:"Vistas recientemente",
+    offlineSaved:d=>`Sin conexión: datos guardados el ${d}.`, offlineSearch:"Sin conexión. Puedes abrir Mi lista o tus películas recientes.", synopsis:"Sinopsis", noSynopsis:"Sin sinopsis disponible.", moreData:"Más datos", status:"Estado", country:"País", originalTitle:"Título original",
+    stReleased:"Estrenada", stUnreleased:"Sin estrenar", stProduction:"En producción", stCancelled:"Cancelada",
+    budgetVsBox:"Presupuesto vs. taquilla", budget:"Presupuesto", boxOffice:"Taquilla",
+    earned:x=>`La taquilla multiplicó por ${x} el presupuesto.`, lost:x=>`La taquilla recuperó el ${x} % del presupuesto.`, noFigure:"Sin datos", trailer:"Ver tráiler", applyWeights:"Aplicar porcentajes", installApp:"Instalar app", iphoneMac:"iPhone y Mac", installed:"App instalada",
+    helpAndroid:"En Chrome, abre el menú ⋮ y elige «Instalar app» o «Añadir a pantalla de inicio».",
+    helpApple:"iPhone: en Safari, toca Compartir y luego «Añadir a pantalla de inicio». Mac: en Safari, menú Archivo → «Añadir al Dock»; en Chrome, el icono de instalar de la barra de direcciones.", diagnose:"¿Falta alguna nota? Ver diagnóstico", missingKeys:k=>`Falta configurar en el servidor: ${k}. Las notas de esas fuentes no aparecerán.`,
+    ES_TP:"Todos los públicos", ES_7:"No recomendada para menores de 7 años", ES_12:"No recomendada para menores de 12 años", ES_16:"No recomendada para menores de 16 años", ES_18:"No recomendada para menores de 18 años", ES_X:"Película X",
+  },
+  en:{
+    searchLabel:"Search a film", searchPh:"Find a movie worth watching", weights:"Weights", weightsTitle:"Average weights", settings:"Settings", close:"Close",
+    weightsHelp:"Set how much you trust each source. Percentages are shared only between the sources that have a score.",
+    language:"Language", apiUrl:"Data server address",
+    apiHelp:"Leave empty to use the sample data. With your server deployed, scores, age ratings and platforms are live.",
+    saveApi:"Save server", saved:"Server saved", cleared:"Using sample data",
+    p_balanced:"Balanced", p_equal:"All equal", p_critics:"Critics", p_audience:"Audience", p_cinephile:"Cinephile", p_spain:"Spain",
+    critics:"Critics", audience:"Audience", average:"Critic AVG", outOf:"out of 10",
+    coverage:(n,t)=>`Based on ${n} of ${t} sources.`, noScore:"Not enough scores",
+    sourcesH:"Sources", sourcesSub:"Every score converted to a 10-point scale.",
+    weightShare:p=>`${p}% of the average`, unused:"Not counted", noData:"No score", add:"Add", loading:"Looking…", manual:"by hand",
+    save:"Save", clear:"Remove",
+    ageH:"Age rating", region:"Country", ageNone:"No rating on record for this country.",
+    ageNote:"PEGI rates video games; films are rated by each country's board (in Spain, the ICAA).",
+    otherCountries:"Other countries",
+    watchH:"Where to watch", flatrate:"Subscription", free:"Free", rent:"Rent", buy:"Buy",
+    watchNone:"No platforms on record in this country right now.", attrib:"Availability: JustWatch data via TMDB.", openAll:"See all options",
+    helloH:"Dozens of critics. Just one rating.", helloSub:"Tired of every site rating movies differently?",
+    helloBody:'At <b class="gold">CRITIC AVG</b> we\'ve worked hard to get the most objective score possible. And that\'s not all: in <button class="inline-link" data-openweights>the filters</button> you can give critics or the audience as much weight as you like. Watch the score change!',
+    tryThese:"Try",
+    demo:'<b>Sample mode.</b> The scores shown are illustrative. <button id="demoSet">Connect your server</button> for live data.',
+    verdicts:["Skip it","Weak","Uneven","Decent","Good","Very good","Essential"],
+    min:"min", dir:"Directed by",
+    errSearch:"Search failed. Check the server address in Settings.", errMovie:"The film couldn't be loaded. Try again.",
+    noResults:"No results for that search.",
+    trending:"This week:", myList:"My list", addToList:"Add to my list", inList:"In my list", addedToList:"Added to My list", removedFromList:"Removed from My list",
+    share:"Share", linkCopied:"Link copied", shareText:(ti,y,sc)=>`${ti}${y ? " ("+y+")" : ""}: ${sc}/10 on Critic AVG`,
+    listEmpty:"You haven't saved any films yet. Open one and tap \u201cAdd to my list\u201d.", remove:"Remove",
+    newOn:x=>`Now on ${x}`, newOnPlatforms:n=>n === 1 ? "A film on your list is now streaming" : `${n} films on your list are now streaming`,
+    alertsOnApp:"We'll let you know when a film on your list arrives on a streaming platform.", alertsOnWeb:"New streaming arrivals are marked here each time you open My list. The Android app also sends you a notification.",
+    offlineTitle:"You're offline", offlineBody:"There's no internet right now. You can still see My list and the films you opened recently.", recentSaved:"Recently viewed",
+    offlineSaved:d=>`Offline: data saved on ${d}.`, offlineSearch:"You're offline. You can open My list or your recent films.", synopsis:"Synopsis", noSynopsis:"No synopsis available.", moreData:"More data", status:"Status", country:"Country", originalTitle:"Original title",
+    stReleased:"Released", stUnreleased:"Unreleased", stProduction:"In production", stCancelled:"Cancelled",
+    budgetVsBox:"Budget vs. box office", budget:"Budget", boxOffice:"Box office",
+    earned:x=>`Box office made ${x}× its budget.`, lost:x=>`Box office recovered ${x}% of its budget.`, noFigure:"No data", trailer:"Watch trailer", applyWeights:"Apply percentages", installApp:"Install app", iphoneMac:"iPhone and Mac", installed:"App installed",
+    helpAndroid:"In Chrome, open the ⋮ menu and choose \u201cInstall app\u201d or \u201cAdd to Home screen\u201d.",
+    helpApple:"iPhone: in Safari, tap Share, then \u201cAdd to Home Screen\u201d. Mac: in Safari, File → \u201cAdd to Dock\u201d; in Chrome, the install icon in the address bar.", diagnose:"Missing a score? See diagnostics", missingKeys:k=>`Missing on the server: ${k}. Scores from those sources won’t appear.`,
+    ES_TP:"Suitable for all ages", ES_7:"Not recommended under 7", ES_12:"Not recommended under 12", ES_16:"Not recommended under 16", ES_18:"Not recommended under 18", ES_X:"X-rated film",
+  }
+};
+let lang = store.get("lang", (navigator.language||"es").toLowerCase().startsWith("es") ? "es" : "en");
+const nm = s => typeof s.name === "string" ? s.name : (s.name[lang] || s.name.en);
+const t = (k, ...a) => { const v = (T[lang]||T.es)[k]; return typeof v === "function" ? v(...a) : (v ?? k); };
+
+/* ================= demo data (illustrative) ================= */
+const DEMO = [
+  { id:693134, imdb_id:"tt15239678", title:"Dune: Parte dos", original_title:"Dune: Part Two", year:"2024", runtime:166,
+    genres:["Ciencia ficción","Aventura"], director:["Denis Villeneuve"],
+    overview:"Paul Atreides se une a los Fremen mientras busca venganza contra quienes destruyeron a su familia, y debe elegir entre el amor y el destino del universo.",
+    status:"Released", countries:["US","CA"], budget:190000000, revenue:714000000,
+    ratings:{ imdb:{value:8.5,scale:10}, tmdb:{value:8.1,scale:10}, trakt:{value:8.3,scale:10}, mubi:{value:8.0,scale:10}, letterboxd:{value:4.38,scale:5},
+              rottentomatoes:{value:92,scale:100}, rtaudience:{value:95,scale:100}, metacritic:{value:79,scale:100}, mcusers:{value:8.2,scale:10}, sensacine:{value:4.0,scale:5,users:4.2} },
+    certifications:{ ES:{cert:"12"}, US:{cert:"PG-13"}, GB:{cert:"12A"}, DE:{cert:"12"}, FR:{cert:"U"}, MX:{cert:"B"} },
+    providers:{ ES:{ flatrate:[{name:"Max"}], rent:[{name:"Apple TV"},{name:"Google Play"},{name:"Rakuten TV"}], buy:[{name:"Apple TV"}], free:[] },
+                US:{ flatrate:[{name:"Max"}], rent:[{name:"Apple TV"},{name:"Prime Video"}], buy:[{name:"Apple TV"}], free:[] } } },
+  { id:906126, imdb_id:"tt16277242", title:"La sociedad de la nieve", original_title:"La sociedad de la nieve", year:"2023", runtime:144,
+    genres:["Drama","Historia"], director:["J.A. Bayona"],
+    overview:"En 1972, un avión con un equipo de rugby uruguayo se estrella en los Andes. Los supervivientes tendrán que resistir en uno de los lugares más hostiles del planeta.",
+    status:"Released", countries:["ES","UY"], budget:65000000, revenue:0,
+    ratings:{ imdb:{value:7.8,scale:10}, tmdb:{value:8.0,scale:10}, trakt:{value:7.9,scale:10}, mubi:{value:7.6,scale:10}, letterboxd:{value:3.9,scale:5},
+              rottentomatoes:{value:90,scale:100}, rtaudience:{value:92,scale:100}, metacritic:{value:72,scale:100}, mcusers:{value:8.0,scale:10}, sensacine:{value:4.0,scale:5,users:4.3} },
+    certifications:{ ES:{cert:"16"}, US:{cert:"R"}, GB:{cert:"15"}, DE:{cert:"16"} },
+    providers:{ ES:{ flatrate:[{name:"Netflix"}], rent:[], buy:[], free:[] }, US:{ flatrate:[{name:"Netflix"}], rent:[], buy:[], free:[] } } },
+];
+
+/* ================= state ================= */
+// When the app is served by its own data server (the bundled Cloudflare Worker), it uses that server automatically.
+const IS_APP = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const PLUG = (window.Capacitor && window.Capacitor.Plugins) || {};
+const DEFAULT_API = window.CRITICAVG_API || (window.CINESCORE_SAME_ORIGIN ? location.origin : "");
+const SITE_URL = (window.CRITICAVG_SITE || window.CRITICAVG_API || location.origin).replace(/\/$/, "");
+let API = store.get("api", "") || DEFAULT_API;
+let weights = Object.assign({}, PRESETS.balanced, store.get("weights", {}));
+let region = store.get("region2", "ES"); // Spain by default; a country picked by hand is remembered
+let film = null;           // current film payload
+let live = {};             // ratings fetched later (scraped)
+let pending = new Set();
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+/* ================= data layer ================= */
+async function api(path){
+  const r = await fetch(API.replace(/\/$/,"") + path, { cache: "no-store" }); // always fresh scores, never a copy saved on the device
+  if(!r.ok){
+    let msg = "HTTP " + r.status;
+    try{ const j = await r.json(); if(j.error) msg = j.error; }catch(_){}
+    throw new Error(msg);
+  }
+  return r.json();
+}
+async function searchFilms(q){
+  if(!API){
+    const n = q.toLowerCase();
+    return DEMO.filter(f => (f.title+" "+f.original_title).toLowerCase().includes(n)).map(f => ({ id:f.id, title:f.title, original_title:f.original_title, year:f.year }));
+  }
+  return (await api(`/api/search?q=${encodeURIComponent(q)}&lang=${lang==="es"?"es-ES":"en-US"}`)).results;
+}
+async function loadFilm(id){
+  live = {}; pending = new Set();
+  if(!API){ film = structuredClone(DEMO.find(f => f.id === +id) || DEMO[0]); render(); return; }
+  $("#main").innerHTML = `<p class="coverage" style="padding:40px 0">${t("loading")}</p>`;
+  try{
+    film = await api(`/api/movie?id=${id}&lang=${lang==="es"?"es-ES":"en-US"}`);
+  }catch(e){
+    // No connection (or server down): use the copy saved on this device, if there is one
+    const saved = store.get("film." + id, null);
+    if(saved){ film = { ...saved.film, _offlineAt: saved.at }; live = saved.live || {}; render(); return; }
+    if(!navigator.onLine){ renderOffline(); return; }
+    $("#main").innerHTML = `<p style="padding:40px 0">${t("errMovie")}<br><small style="color:var(--muted)">${esc(e.message)}</small></p>`; return;
+  }
+  // Scraped sources always; IMDb and Metacritic only when OMDb had no score (common for recent films)
+  const toFetch = SOURCES.filter(s => (s.scraped && !s.manualOnly) || (s.fallback && film.ratings[s.id]?.value == null));
+  toFetch.forEach(s => pending.add(s.id));
+  render();
+  const loaded = film;
+  for(const s of toFetch){
+    const qs = new URLSearchParams({ name:s.id, imdb:film.imdb_id||"", title:film.title||"", original:film.original_title||"", year:film.year||"", rt:film.ratings.rottentomatoes?.url||"" });
+    api(`/api/source?${qs}`).then(r => { live[s.id] = r; }).catch(() => { live[s.id] = { value:null }; })
+      .finally(() => {
+        pending.delete(s.id);
+        if(film !== loaded) return;
+        renderScores();
+        if(!pending.size){ saveSnapshot(); refreshListEntry(); }
+      });
+  }
+  if(!toFetch.length){ saveSnapshot(); refreshListEntry(); }
+}
+
+/* ================= saved on this device: recent films (offline) ================= */
+const RECENT_MAX = 30;
+function saveSnapshot(){
+  if(!film || film._offlineAt) return;
+  store.set("film." + film.id, { film, live, at: Date.now() });
+  const recent = [film.id, ...store.get("recent", []).filter(x => x !== film.id)];
+  const keep = new Set([...recent.slice(0, RECENT_MAX), ...getList().map(x => x.id)]);
+  recent.slice(RECENT_MAX).forEach(x => { if(!keep.has(x)) { try{ localStorage.removeItem("cs.film." + x); }catch(_){} } });
+  store.set("recent", recent.slice(0, RECENT_MAX));
+}
+
+/* ================= My list ================= */
+function getList(){ return store.get("list", []); }
+function inList(id){ return getList().some(x => x.id === +id); }
+function streamNames(f, cc){
+  const p = (f.providers || {})[cc] || {};
+  return [...new Set([...(p.flatrate || []), ...(p.free || [])].map(x => x.name))];
+}
+function saveList(list){
+  store.set("list", list);
+  const n = list.length, c = $("#listCount");
+  if(c){ c.hidden = !n; c.textContent = n; }
+  syncRunner(list);
+}
+function listEntryFor(f){
+  return { id: f.id, title: f.title, year: f.year, poster: f.poster || null, score: compute().avg, region,
+           known: streamNames(f, region), fresh: [], savedAt: Date.now() };
+}
+async function toggleList(){
+  if(!film) return;
+  let list = getList();
+  if(inList(film.id)){ list = list.filter(x => x.id !== film.id); toast(t("removedFromList")); }
+  else {
+    list = [listEntryFor(film), ...list]; toast(t("addedToList"));
+    saveSnapshot();
+    // Ask once for permission to send the "now streaming" notifications
+    if(IS_APP && PLUG.BackgroundRunner){ try{ await PLUG.BackgroundRunner.requestPermissions({ apis: ["notifications"] }); }catch(_){} }
+  }
+  saveList(list);
+  render();
+}
+/** Viewing a saved film refreshes its score and marks what's on now as already seen. */
+function refreshListEntry(){
+  if(!film) return;
+  const list = getList(), i = list.findIndex(x => x.id === film.id);
+  if(i < 0) return;
+  const now = streamNames(film, list[i].region || region);
+  list[i] = { ...list[i], title: film.title, poster: film.poster || list[i].poster, score: compute().avg ?? list[i].score,
+              known: [...new Set([...(list[i].known || []), ...now])], fresh: [] };
+  saveList(list);
+}
+/** Checks every saved film for new streaming platforms (subscription or free) in its country. */
+async function checkAvailability(force){
+  const list = getList();
+  if(!API || !list.length || !navigator.onLine) return;
+  const last = store.get("lastCheck", 0);
+  if(!force && Date.now() - last < 6 * 3600e3) return;
+  store.set("lastCheck", Date.now());
+  const news = [];
+  for(const item of list){
+    try{
+      const r = await api(`/api/providers?id=${item.id}&region=${item.region || region}`);
+      const known = new Set(item.known || []);
+      const added = (r.stream || []).filter(n => !known.has(n));
+      if(added.length){ item.fresh = [...new Set([...(item.fresh || []), ...added])]; news.push(item.title); }
+      item.known = [...new Set([...known, ...(r.stream || [])])];
+    }catch(_){}
+  }
+  saveList(list);
+  if(news.length){ toast(t("newOnPlatforms", news.length)); if(location.hash === "#list") renderList(); }
+}
+function renderList(){
+  const list = getList();
+  $("#main").innerHTML = `
+    <section class="listpage">
+      <h1>${t("myList")}</h1>
+      ${!list.length ? `<p class="lead-s">${t("listEmpty")}</p>` : `
+      <ul class="mylist">
+        ${list.map(x => `
+        <li>
+          <a class="li-main" href="#film-${x.id}">
+            <span class="li-poster">${x.poster && navigator.onLine ? `<img src="${IMG}w154${x.poster}" alt="" loading="lazy" onerror="this.remove()">` : ""}<i>${esc((x.title || "?")[0])}</i></span>
+            <span class="li-text"><b>${esc(x.title)}</b><small>${esc(x.year || "")}</small>
+              ${(x.fresh || []).length ? `<span class="fresh">${t("newOn", x.fresh.join(", "))}</span>` : ""}</span>
+            <span class="li-score">${x.score != null ? (Math.round(x.score * 10) / 10).toFixed(1) : "–"}</span>
+          </a>
+          <button class="li-del" data-del="${x.id}" aria-label="${t("remove")}: ${esc(x.title)}">✕</button>
+        </li>`).join("")}
+      </ul>
+      <p class="coverage">${IS_APP ? t("alertsOnApp") : t("alertsOnWeb")}</p>`}
+    </section>`;
+  if(list.length && navigator.onLine) checkAvailability(false);
+}
+
+/* ================= store app (Android) ================= */
+const RUNNER_LABEL = "com.criticavg.app.check";
+/** Hands My list to the background checker, which notifies when a film arrives on a streaming platform. */
+function syncRunner(list){
+  if(!IS_APP || !PLUG.BackgroundRunner) return;
+  try{
+    PLUG.BackgroundRunner.dispatchEvent({ label: RUNNER_LABEL, event: "syncList",
+      details: { api: API, lang, list: (list || getList()).map(x => ({ id: x.id, title: x.title, region: x.region || region, known: x.known || [] })) } })
+      .catch(() => {});
+  }catch(_){}
+}
+function setupApp(){
+  if(!IS_APP) return;
+  document.documentElement.classList.add("in-app");
+  try{ PLUG.StatusBar && PLUG.StatusBar.setStyle({ style: "DARK" }); PLUG.StatusBar && PLUG.StatusBar.setBackgroundColor({ color: "#202227" }); }catch(_){}
+  try{ PLUG.SplashScreen && PLUG.SplashScreen.hide(); }catch(_){}
+  if(PLUG.App){
+    // Android back button: close panels, then go back, then leave the app from the home page
+    PLUG.App.addListener("backButton", () => {
+      if(document.querySelector(".sheet.on")){ closeSheets(); return; }
+      if(location.hash && location.hash !== "#") history.back(); else PLUG.App.exitApp();
+    });
+    PLUG.App.addListener("resume", () => checkAvailability(true));
+  }
+  syncRunner();
+}
+
+/* ================= share ================= */
+async function shareFilm(){
+  if(!film) return;
+  const c = compute();
+  const url = `${SITE_URL}/?film=${film.id}`;
+  const text = t("shareText", film.title, film.year, c.avg == null ? "–" : c.avg.toFixed(1).replace(".", lang === "es" ? "," : "."));
+  try{
+    if(IS_APP && PLUG.Share){ await PLUG.Share.share({ title: film.title, text, url, dialogTitle: t("share") }); return; }
+    if(navigator.share){ await navigator.share({ title: film.title, text, url }); return; }
+  }catch(e){ if(e && (e.name === "AbortError" || /cancel/i.test(e.message || ""))) return; }
+  try{ await navigator.clipboard.writeText(`${text} ${url}`); toast(t("linkCopied")); }catch(_){ toast(url); }
+}
+
+/* ================= offline ================= */
+function renderOffline(){
+  const recent = store.get("recent", []).map(id => store.get("film." + id, null)).filter(Boolean).slice(0, 12);
+  $("#main").innerHTML = `
+    <section class="listpage">
+      <h1>${t("offlineTitle")}</h1>
+      <p class="lead-s">${t("offlineBody")}</p>
+      <p><a class="act on" href="#list">${t("myList")}</a></p>
+      ${recent.length ? `<h2 class="sub-h">${t("recentSaved")}</h2><ul class="mylist">${recent.map(r => `
+        <li><a class="li-main" href="#film-${r.film.id}"><span class="li-poster"><i>${esc((r.film.title || "?")[0])}</i></span>
+        <span class="li-text"><b>${esc(r.film.title)}</b><small>${esc(r.film.year || "")}</small></span></a></li>`).join("")}</ul>` : ""}
+    </section>`;
+}
+
+/* ================= scoring ================= */
+try{ Object.keys(localStorage).filter(k => k.startsWith("cs.manual.")).forEach(k => localStorage.removeItem(k)); }catch(_){}
+function ratingFor(s){
+  let r = live[s.id] || film.ratings[s.id];
+  if(s.fromSource){ const src = live[s.fromSource] || film.ratings[s.fromSource]; r = src ? { value: src.users ?? null, scale: s.scale, url: src.url } : null; }
+  if(s.id === "rottentomatoes" && (!r || r.value == null) && live.rtaudience?.critics != null)
+    r = { value: live.rtaudience.critics, scale: 100, url: live.rtaudience.url };
+  if(s.id === "metacritic" && (!r || r.value == null) && live.mcusers?.critics != null)
+    r = { value: live.mcusers.critics, scale: 100, url: live.mcusers.url };
+  return r && r.value != null ? { ...r, scale:r.scale || s.scale } : (r ? { value:null, url:r.url } : null);
+}
+const norm = r => r && r.value != null ? Math.max(0, Math.min(10, r.value / r.scale * 10)) : null;
+
+function compute(){
+  let sum=0, sw=0; const rows=[]; const grp={ critics:[0,0], audience:[0,0] };
+  for(const s of SOURCES){
+    const r = ratingFor(s), n = norm(r), w = +weights[s.id] || 0;
+    rows.push({ s, r, n, w });
+    if(n != null && w > 0){ sum += n*w; sw += w; grp[s.group][0] += n*w; grp[s.group][1] += w; }
+  }
+  rows.forEach(x => x.share = (x.n != null && x.w > 0 && sw) ? x.w/sw*100 : 0);
+  const g = k => grp[k][1] ? grp[k][0]/grp[k][1] : null;
+  return { avg: sw ? sum/sw : null, rows, critics:g("critics"), audience:g("audience"), used: rows.filter(x => x.share > 0).length };
+}
+const verdict = v => { const V = t("verdicts"); return v==null ? "" : V[v<4?0:v<5?1:v<6?2:v<6.8?3:v<7.6?4:v<8.4?5:6]; };
+
+/* ================= render ================= */
+function leaderSVG(v){
+  const R = 108, C = 2*Math.PI*R, frac = v==null ? 0 : v/10;
+  const ticks = Array.from({length:40}, (_,i) => {
+    const a = i/40*2*Math.PI, r1 = 128, r2 = i%10===0 ? 116 : 122;
+    return `<line x1="${130+r1*Math.sin(a)}" y1="${130-r1*Math.cos(a)}" x2="${130+r2*Math.sin(a)}" y2="${130-r2*Math.cos(a)}" stroke="var(--leader)" stroke-width="${i%10===0?2:1}"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 260 260" role="img" aria-label="${v==null?t("noScore"):v.toFixed(1)+" "+t("outOf")}">
+    ${ticks}
+    <circle cx="130" cy="130" r="${R}" fill="none" stroke="var(--screen)" stroke-width="26"/>
+    <circle class="sweep" cx="130" cy="130" r="${R}" fill="none" stroke="var(--gold)" stroke-width="26"
+      stroke-dasharray="${C}" stroke-dashoffset="${C}" data-target="${C*(1-frac)}" transform="rotate(-90 130 130)"/>
+    <circle cx="130" cy="130" r="80" fill="none" stroke="var(--leader)" stroke-width="1"/>
+    <path d="M130 30v40M130 190v40M30 130h40M190 130h40" stroke="var(--leader)" stroke-width="1"/>
+  </svg>`;
+}
+
+function render(){
+  if(!film){ renderHello(); placeSearch(); return; }
+  placeSearch();
+  const f = film;
+  const poster = f.poster ? `<img src="${IMG}w342${f.poster}" alt="" loading="lazy" onerror="this.remove()">` : "";
+  const initials = esc((f.original_title||f.title||"?").split(/\s+/).slice(0,2).map(w=>w[0]).join(""));
+  $("#main").innerHTML = `
+    <section class="film">
+      <div class="poster"><div class="ph">${initials}</div>${poster}</div>
+      <div>
+        <h1>${esc(f.title)}</h1>
+        ${f.original_title && f.original_title !== f.title ? `<p class="orig">${esc(f.original_title)}</p>` : ""}
+        <div class="facts">
+          ${f.year ? `<span><strong>${esc(f.year)}</strong></span>` : ""}
+          ${f.runtime ? `<span><strong>${f.runtime}</strong> ${t("min")}</span>` : ""}
+          ${f.director?.length ? `<span>${t("dir")} <strong>${esc(f.director.join(", "))}</strong></span>` : ""}
+          ${f.genres?.length ? `<span>${esc(f.genres.join(", "))}</span>` : ""}
+        </div>
+        ${f._offlineAt ? `<p class="offline-note">${t("offlineSaved", new Date(f._offlineAt).toLocaleDateString(lang === "es" ? "es-ES" : "en-US"))}</p>` : ""}
+        <div class="actions">
+          ${f.trailer?.url ? `<a class="trailer" href="${esc(f.trailer.url)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>${t("trailer")}</a>` : ""}
+          <button class="act ${inList(f.id) ? "on" : ""}" id="listBtn" aria-pressed="${inList(f.id)}"><svg viewBox="0 0 24 24" fill="${inList(f.id) ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>${t(inList(f.id) ? "inList" : "addToList")}</button>
+          <button class="act" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg>${t("share")}</button>
+        </div>
+      </div>
+    </section>
+    <div class="grid">
+      <div class="maincol">
+      <section class="panel p-score" aria-labelledby="scoreH">
+        <h2 id="scoreH" class="sr">${t("average")}</h2>
+        ${[...(f.warnings||[]), ...(f.notes||[])].length ? `<p class="warn" role="status">${[...(f.warnings||[]), ...(f.notes||[])].map(esc).join("<br>")}</p>` : ""}
+        <div id="scoreBlock"></div>
+      </section>
+      <section class="panel p-sources" aria-labelledby="sourcesH">
+        <h2 id="sourcesH">${t("sourcesH")}</h2>
+        <p class="sub">${t("sourcesSub")}</p>
+        <ul class="sources" id="sources"></ul>
+        <div class="legend"><span><i style="background:var(--critic)"></i>${t("critics")}</span><span><i style="background:var(--crowd)"></i>${t("audience")}</span>
+          ${API ? `<a style="margin-left:auto" href="${esc(API.replace(/\/$/,""))}/api/diagnose?id=${f.id}&lang=${lang==="es"?"es-ES":"en-US"}" target="_blank" rel="noopener">${t("diagnose")}</a>` : ""}</div>
+      </section>
+      </div>
+      <div class="side">
+        <section class="panel p-age" aria-labelledby="ageH">
+          <div class="panelhead"><h2 id="ageH">${t("ageH")}</h2><label class="sr" for="region">${t("region")}</label><select id="region" class="mini"></select></div>
+          <div id="ageBlock"></div>
+        </section>
+        <section class="panel p-syn" aria-labelledby="synH">
+          <h2 id="synH">${t("synopsis")}</h2>
+          <p class="synopsis">${f.overview ? esc(f.overview) : `<span class="muted">${t("noSynopsis")}</span>`}</p>
+        </section>
+        <section class="panel p-more" aria-labelledby="moreH">
+          <h2 id="moreH">${t("moreData")}</h2>
+          <dl class="facts-list">
+            <div><dt>${t("status")}</dt><dd>${statusLabel(f.status)}</dd></div>
+            <div><dt>${t("country")}</dt><dd>${countriesLabel(f)}</dd></div>
+            <div><dt>${t("originalTitle")}</dt><dd>${esc(f.original_title || f.title || "–")}</dd></div>
+          </dl>
+          ${moneyBars(f)}
+        </section>
+        <section class="panel p-watch" aria-labelledby="watchH">
+          <h2 id="watchH">${t("watchH")}</h2>
+          <div id="watchBlock"></div>
+        </section>
+      </div>
+    </div>`;
+  renderRegionSelect();
+  renderScores(true);
+  renderAge();
+  renderWatch();
+}
+
+function renderScores(first){
+  if(!film || !$("#scoreBlock")) return;
+  const c = compute();
+  const prevSweep = $("#scoreBlock .sweep");
+  const prevOffset = prevSweep ? prevSweep.style.strokeDashoffset : null;
+  $("#scoreBlock").innerHTML = `
+    <div class="scorewrap">
+      <div class="leader">${leaderSVG(c.avg)}<div class="num"><div>${c.avg==null?"–":c.avg.toFixed(1)}<small>${t("outOf")}</small></div></div></div>
+      <div>
+        <p class="verdict">${c.avg==null ? t("noScore") : verdict(c.avg)}</p>
+        <div class="split">
+          <div class="c"><b>${c.critics==null?"–":c.critics.toFixed(1)}</b>${t("critics")}</div>
+          <div class="a"><b>${c.audience==null?"–":c.audience.toFixed(1)}</b>${t("audience")}</div>
+        </div>
+        <p class="coverage">${t("coverage", c.used, SOURCES.length)}</p>
+      </div>
+    </div>`;
+  const sw = $("#scoreBlock .sweep");
+  if(prevOffset && !first) sw.style.strokeDashoffset = prevOffset;
+  requestAnimationFrame(() => requestAnimationFrame(() => { sw.style.strokeDashoffset = sw.dataset.target; }));
+
+  $("#sources").innerHTML = c.rows.map(({s, r, n, w, share}) => {
+    const isPending = pending.has(s.id) || (s.fromSource && pending.has(s.fromSource));
+    const url = (r && r.url) || s.home;
+    let val;
+    if(isPending){
+      val = `<span class="valbtn empty loading"><b>${t("loading")}</b></span>`;
+    } else if(n == null){
+      val = `<span class="valbtn empty"><b>${t("noData")}</b></span>`;
+    } else {
+      val = `<span class="valbtn" aria-label="${esc(nm(s))}: ${s.fmt(r.value)}${s.unit}"><b>${n.toFixed(1)}</b><small>${s.fmt(r.value)}${s.unit}</small></span>`;
+    }
+    return `<li class="src ${s.group} ${n==null?"off":""}">
+      <div class="name"><a href="${esc(url)}" target="_blank" rel="noopener">${esc(nm(s))}</a><small>${share ? t("weightShare", Math.round(share)) : t("unused")}</small></div>
+      <div class="track" aria-hidden="true"><div class="fill" style="width:${n==null?0:n*10}%;opacity:${w>0?1:.35}"></div></div>
+      <div class="val">${val}</div>
+    </li>`;
+  }).join("");
+}
+
+/* ---- age ratings ---- */
+function countriesOf(){
+  // Only countries that actually rate this film, plus the user's own country (it also drives "where to watch")
+  const rated = Object.keys(film.certifications||{}).filter(cc => String(film.certifications[cc]?.cert||"").trim());
+  return [...new Set([...rated, region])].sort((x, y) => countryName(x).localeCompare(countryName(y), lang));
+}
+function countryName(cc){
+  try{ return new Intl.DisplayNames([lang], { type:"region" }).of(cc); }catch(_){ return cc; }
+}
+function renderRegionSelect(){
+  const sel = $("#region");
+  sel.innerHTML = countriesOf().map(cc => `<option value="${cc}" ${cc===region?"selected":""}>${esc(countryName(cc))}</option>`).join("");
+  sel.onchange = () => { region = sel.value; store.set("region2", region); renderAge(); renderWatch(); };
+}
+function esMeaning(cert){
+  const c = String(cert).toUpperCase().replace(/^\+/,"");
+  const k = c === "A" || c === "APTA" || c === "TP" ? "TP" : c;
+  return T[lang]["ES_"+k] || "";
+}
+function renderAge(){
+  const c = (film.certifications || {})[region];
+  const meaning = c ? (region === "ES" ? esMeaning(c.cert) : "") : "";
+  $("#ageBlock").innerHTML = `
+    <div class="age">
+      <div class="badge ${c?"":"none"}">${c ? esc(c.cert) : "?"}</div>
+      <p class="what">${c ? esc(meaning || countryName(region)) : `<span class="muted">${t("ageNone")}</span>`}</p>
+    </div>`;
+}
+
+/* ---- where to watch ---- */
+function renderWatch(){
+  const p = (film.providers || {})[region];
+  const seen = new Set(), list = [];
+  for(const g of ["flatrate","free","rent","buy"]) for(const x of (p?.[g] || [])){
+    const k = x.id || x.name; if(seen.has(k)) continue; seen.add(k); list.push({ ...x, g });
+  }
+  const link = esc(p?.link || "https://www.themoviedb.org/movie/"+film.id+"/watch");
+  $("#watchBlock").innerHTML = list.length
+    ? `<div class="picons">${list.map(x => `<a class="picon" href="${link}" target="_blank" rel="noopener" title="${esc(x.name)} · ${t(x.g)}" aria-label="${esc(x.name)}, ${t(x.g)}">${
+        x.logo ? `<img src="${IMG}w154${x.logo}" alt="" loading="lazy" onerror="this.outerHTML='<span class=pl>${esc(x.name[0])}</span>'">` : `<span class="pl">${esc(x.name[0])}</span>`}</a>`).join("")}</div>
+       <p class="attrib">JustWatch</p>`
+    : `<p class="empty-watch">${t("watchNone")}</p>`;
+}
+
+/* ---- more data helpers ---- */
+function statusLabel(st){
+  const k = { "Released":"stReleased", "In Production":"stProduction", "Post Production":"stProduction", "Canceled":"stCancelled", "Planned":"stUnreleased", "Rumored":"stUnreleased" }[st];
+  return k ? t(k) : "–";
+}
+function countriesLabel(f){
+  const codes = (f.countries && f.countries.length) ? f.countries : (f.origin_country || []);
+  return codes.length ? esc(codes.map(countryName).join(", ")) : "–";
+}
+function money(n){
+  try{ return new Intl.NumberFormat(lang === "es" ? "es-ES" : "en-US", { style:"currency", currency:"USD", notation:"compact", maximumFractionDigits:1 }).format(n); }
+  catch(_){ return "$" + Math.round(n/1e6) + "M"; }
+}
+function moneyBars(f){
+  const b = +f.budget || 0, r = +f.revenue || 0;
+  const max = Math.max(b, r);
+  const row = (label, v, cls) => `<div class="mrow"><div class="mlab"><span>${label}</span><b>${v ? money(v) : t("noFigure")}</b></div><div class="mtrack"><div class="mfill ${cls}" style="width:${max && v ? Math.max(2, v/max*100) : 0}%"></div></div></div>`;
+  const ratio = b && r ? `<p class="mratio">${r >= b ? t("earned", (r/b).toFixed(1).replace(".", lang === "es" ? "," : ".")) : t("lost", Math.round(r/b*100))}</p>` : "";
+  return `<div class="money"><h3>${t("budgetVsBox")}</h3>${row(t("budget"), b, "b")}${row(t("boxOffice"), r, "r")}${ratio}</div>`;
+}
+
+/* ---- empty state ---- */
+function renderHello(){
+  if(API && !navigator.onLine){ renderOffline(); return; }
+  $("#main").innerHTML = `
+    <section class="hello">
+      <h1>${t("helloH")}</h1>
+      <div id="searchSlot"></div>
+      <p class="lead">${t("helloSub")}</p>
+      <p class="body">${t("helloBody")}</p>
+      ${!API ? `<div class="try" aria-label="${t("tryThese")}">${DEMO.map(f => `<button data-film="${f.id}">${esc(f.title)}</button>`).join("")}</div>` : `<div class="try" id="trending"></div>`}
+      <p class="coverage" id="health" role="status"></p>
+      <div id="installHome"></div>
+    </section>`;
+  if(API) loadTrending();
+  refreshInstall();
+}
+
+/* ================= install (PWA) ================= */
+let deferredInstall = null;
+const isInstalled = () => { try{ return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; }catch(_){ return false; } };
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; refreshInstall(); }); // no automatic browser prompt: the buttons below offer it
+window.addEventListener("appinstalled", () => { deferredInstall = null; refreshInstall(); toast(t("installed")); });
+const ICON_PHONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2"/></svg>';
+const ICON_LAPTOP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="4" y="5" width="16" height="10.5" rx="1.6"/><path d="M2 18.5h20"/></svg>';
+function installHTML(){
+  if(isInstalled() || IS_APP) return "";
+  return `<div class="install">
+    <div class="install-row">
+      <button class="inst" data-install="android">${ICON_PHONE}<span>Android</span></button>
+      <button class="inst" data-install="apple">${ICON_LAPTOP}<span>${t("iphoneMac")}</span></button>
+    </div>
+    <p class="install-label">${t("installApp")}</p>
+    <p class="install-help" id="installHelp" role="status" hidden></p>
+  </div>`;
+}
+function refreshInstall(){
+  ["#installHome", "#installSettings"].forEach(sel => { const el = $(sel); if(el) el.innerHTML = installHTML(); });
+}
+async function doInstall(kind, btn){
+  const help = btn.closest(".install").querySelector(".install-help");
+  if(deferredInstall){
+    deferredInstall.prompt();
+    try{ await deferredInstall.userChoice; }catch(_){}
+    deferredInstall = null; refreshInstall(); return;
+  }
+  help.textContent = kind === "android" ? t("helpAndroid") : t("helpApple");
+  help.hidden = false;
+}
+let trendingCache = null;
+async function loadTrending(){
+  try{
+    const h = await api("/api/health");
+    const missing = [!h.tmdb && "TMDB_TOKEN", !h.omdb && "OMDB_KEY", h.trakt === false && "TRAKT_CLIENT_ID"].filter(Boolean);
+    if(missing.length && $("#health")) $("#health").textContent = t("missingKeys", missing.join(", "));
+    if(!h.tmdb) return;
+    trendingCache = trendingCache || (await api(`/api/trending?lang=${lang==="es"?"es-ES":"en-US"}`)).results;
+    const el = $("#trending");
+    if(el) el.innerHTML = `<span class="coverage" style="align-self:center;margin-right:4px">${t("trending")}</span>` + trendingCache.slice(0,8).map(f => `<button data-film="${f.id}">${esc(f.title)}</button>`).join("");
+  }catch(_){ if($("#health")) $("#health").textContent = t("errSearch"); }
+}
+
+/* ================= weights sheet ================= */
+function renderWeights(){
+  const activePreset = Object.entries(PRESETS).find(([,p]) => SOURCES.every(s => +p[s.id] === +weights[s.id]))?.[0];
+  $("#presets").innerHTML = Object.keys(PRESETS).map(k => `<button data-preset="${k}" aria-pressed="${k===activePreset}">${t("p_"+k)}</button>`).join("");
+  const total = SOURCES.reduce((a,s) => a + (+weights[s.id]||0), 0) || 1;
+  $("#wrows").innerHTML = SOURCES.map(s => `
+    <div class="wrow ${s.group}">
+      <label for="w-${s.id}">${esc(nm(s))} <span>${s.note || t(s.group)}</span><output id="o-${s.id}">${Math.round((+weights[s.id]||0)/total*100)}%</output></label>
+      <input type="range" id="w-${s.id}" data-w="${s.id}" min="0" max="50" step="1" value="${+weights[s.id]||0}">
+    </div>`).join("");
+}
+function updateWeightOutputs(){
+  const total = SOURCES.reduce((a,s) => a + (+weights[s.id]||0), 0) || 1;
+  SOURCES.forEach(s => { const o = $("#o-"+s.id); if(o) o.textContent = Math.round((+weights[s.id]||0)/total*100) + "%"; });
+  const activePreset = Object.entries(PRESETS).find(([,p]) => SOURCES.every(s => +p[s.id] === +weights[s.id]))?.[0];
+  document.querySelectorAll("[data-preset]").forEach(b => b.setAttribute("aria-pressed", b.dataset.preset === activePreset));
+}
+
+/* ================= sheets / ui ================= */
+let lastFocus = null;
+function openSheet(id){
+  lastFocus = document.activeElement;
+  const s = $(id); s.classList.add("on"); s.setAttribute("aria-hidden","false"); $("#scrim").classList.add("on");
+  setTimeout(() => s.querySelector("button, input")?.focus(), 50);
+}
+function closeSheets(){
+  document.querySelectorAll(".sheet").forEach(s => { s.classList.remove("on"); s.setAttribute("aria-hidden","true"); });
+  $("#scrim").classList.remove("on"); lastFocus?.focus?.();
+}
+function toast(msg){ const el = $("#toast"); el.textContent = msg; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2200); }
+
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i]").forEach(el => el.textContent = t(el.dataset.i));
+  document.querySelectorAll("[data-ph]").forEach(el => el.placeholder = t(el.dataset.ph));
+  document.querySelectorAll("[data-al]").forEach(el => el.setAttribute("aria-label", t(el.dataset.al)));
+  document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === lang));
+  const dn = $("#demoNote"); dn.hidden = !!API; dn.innerHTML = API ? "" : t("demo");
+  renderWeights();
+  render();
+}
+
+/* ---- search ---- */
+let sTimer, sSeq = 0, sItems = [], sIdx = -1;
+const q = $("#q"), box = $("#results");
+q.addEventListener("input", () => {
+  clearTimeout(sTimer);
+  const v = q.value.trim();
+  if(v.length < 2){ box.hidden = true; return; }
+  sTimer = setTimeout(async () => {
+    const my = ++sSeq;
+    try{
+      const res = await searchFilms(v);
+      if(my !== sSeq) return;
+      sItems = res; sIdx = -1;
+      box.innerHTML = res.length ? res.map((r,i) => `<button class="res" role="option" data-film="${r.id}" id="opt-${i}">
+          ${r.poster ? `<img src="${IMG}w92${r.poster}" alt="" loading="lazy">` : `<span class="ph"></span>`}
+          <span><b>${esc(r.title)}</b><small>${esc([r.year, r.original_title !== r.title ? r.original_title : ""].filter(Boolean).join(" · "))}</small></span>
+        </button>`).join("") : `<p style="padding:10px;margin:0;color:var(--muted)">${t("noResults")}</p>`;
+      box.hidden = false;
+    }catch(e){ if(!navigator.onLine){ box.innerHTML = `<p style="padding:10px;margin:0">${t("offlineSearch")}</p>`; box.hidden = false; return; } box.innerHTML = `<p style="padding:10px;margin:0">${t("errSearch")}<br><small style="color:var(--muted)">${esc(e.message)}</small></p>`; box.hidden = false; }
+  }, 280);
+});
+q.addEventListener("keydown", e => {
+  const opts = [...box.querySelectorAll(".res")];
+  if(e.key === "ArrowDown" || e.key === "ArrowUp"){
+    if(!opts.length) return; e.preventDefault();
+    sIdx = (sIdx + (e.key === "ArrowDown" ? 1 : -1) + opts.length) % opts.length;
+    opts.forEach((o,i) => o.setAttribute("aria-selected", i === sIdx));
+    q.setAttribute("aria-activedescendant", opts[sIdx].id);
+  } else if(e.key === "Enter"){
+    const o = opts[sIdx >= 0 ? sIdx : 0]; if(o){ e.preventDefault(); pick(o.dataset.film); }
+  } else if(e.key === "Escape"){ box.hidden = true; }
+});
+function pick(id){ box.hidden = true; q.value = ""; q.blur(); location.hash = "film-" + id; }
+document.addEventListener("click", e => { if(!e.target.closest(".search")) box.hidden = true; });
+
+/* ---- routing ---- */
+/** Before #main is redrawn, the search box is put back in the header so the redraw can't delete it. */
+(function guardMain(){
+  const main = document.getElementById("main");
+  const desc = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+  Object.defineProperty(main, "innerHTML", {
+    configurable: true,
+    get(){ return desc.get.call(this); },
+    set(html){
+      const box = document.querySelector(".search"), bar = document.querySelector(".bar");
+      if(box && bar && main.contains(box)) bar.insertBefore(box, document.getElementById("openList"));
+      desc.set.call(this, html);
+    }
+  });
+})();
+/** On the home page the search bar sits under the claim; on film pages it lives in the header. */
+function placeSearch(){
+  const box = document.querySelector(".search"), bar = document.querySelector(".bar"), slot = $("#searchSlot");
+  if(!box || !bar) return;
+  if(!film && slot){ if(box.parentElement !== slot) slot.appendChild(box); bar.classList.add("home"); }
+  else { if(box.parentElement !== bar) bar.insertBefore(box, $("#openList")); bar.classList.remove("home"); }
+}
+function route(){
+  const m = location.hash.match(/^#film-(\d+)$/);
+  if(m){ if(!film || film.id !== +m[1]) loadFilm(m[1]); }
+  else if(location.hash === "#list"){ film = null; renderList(); }
+  else { film = null; render(); }
+  placeSearch();
+}
+window.addEventListener("hashchange", route);
+window.addEventListener("online", () => { if(!film) route(); });
+window.addEventListener("offline", () => { if(!film && location.hash !== "#list") renderOffline(); });
+
+/* ---- delegated events ---- */
+document.addEventListener("click", e => {
+  if(e.target.closest("[data-openweights]")){ renderWeights(); openSheet("#weightsSheet"); return; }
+  if(e.target.closest("#openList")){ location.hash = "list"; return; }
+  if(e.target.closest("#listBtn")){ toggleList(); return; }
+  if(e.target.closest("#shareBtn")){ shareFilm(); return; }
+  const del = e.target.closest("[data-del]");
+  if(del){ saveList(getList().filter(x => x.id !== +del.dataset.del)); renderList(); return; }
+  const ib = e.target.closest("[data-install]");
+  if(ib){ doInstall(ib.dataset.install, ib); return; }
+  const el = e.target.closest("[data-film],[data-cc],[data-preset],[data-lang],[data-close],#demoSet,#openWeights,#openSettings,#scrim");
+  if(!el) return;
+  if(el.dataset.film){ pick(el.dataset.film); }
+  else if(el.dataset.cc){ region = el.dataset.cc; store.set("region2", region); renderRegionSelect(); renderAge(); renderWatch(); }
+  else if(el.dataset.preset){ weights = { ...PRESETS[el.dataset.preset] }; store.set("weights", weights); renderWeights(); renderScores(); }
+  else if(el.dataset.lang){ lang = el.dataset.lang; store.set("lang", lang); applyLang(); }
+  else if("close" in el.dataset || el.id === "scrim"){ closeSheets(); }
+  else if(el.id === "openWeights"){ renderWeights(); openSheet("#weightsSheet"); }
+  else if(el.id === "openSettings" || el.id === "demoSet"){ $("#apiUrl").value = API === DEFAULT_API ? "" : API; refreshInstall(); openSheet("#settingsSheet"); }
+});
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape"){
+    closeSheets();
+  }
+});
+$("#wrows").addEventListener("input", e => {
+  const id = e.target.dataset.w; if(!id) return;
+  weights[id] = +e.target.value; store.set("weights", weights);
+  updateWeightOutputs(); renderScores();
+});
+$("#saveApi").addEventListener("click", () => {
+  API = $("#apiUrl").value.trim(); store.set("api", API);
+  API = API || DEFAULT_API; trendingCache = null;
+  toast(API ? t("saved") : t("cleared")); closeSheets(); film = null; applyLang(); route();
+});
+
+/* ---- boot ---- */
+try{
+  // Shared links look like /?film=123: open that film, even in the installed app
+  const shared = new URLSearchParams(location.search).get("film");
+  if(/^\d+$/.test(shared || "")){
+    sessionStorage.setItem("launched", "1");
+    history.replaceState(null, "", location.pathname + "#film-" + shared);
+  }
+  if(isInstalled() && !sessionStorage.getItem("launched")){
+    sessionStorage.setItem("launched", "1");
+    if(/^#film-/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+  }
+}catch(_){}
+applyLang();
+route();
+saveList(getList());          // shows the count on the My list button
+setupApp();
+setTimeout(() => checkAvailability(false), 2500);
+if("serviceWorker" in navigator && location.protocol === "https:" && !IS_APP){ // the store app ships its files inside
+  try{
+    navigator.serviceWorker.register("sw.js").then(reg => reg.update()).catch(() => {});
+    // When an updated version takes over, reload once so the new app appears (skip on the very first install).
+    const hadController = !!navigator.serviceWorker.controller; let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if(hadController && !reloaded){ reloaded = true; location.reload(); } });
+  }catch(_){}
+}
+})();
+</script>
+</body>
+</html>
