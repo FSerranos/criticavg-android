@@ -257,8 +257,24 @@ select.mini{height:32px;border:1px solid var(--rule);border-radius:8px;backgroun
 .listpage h1{font:800 clamp(30px,7vw,52px)/1.1 var(--display);margin:0 0 16px;letter-spacing:-.02em}
 .list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px}
 .list-head h1{margin:0}
-.list-tools{display:flex;gap:8px}
+.list-tools{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:480px){.list-tools .act{padding:7px 12px 7px 10px;font-size:14px;gap:6px}}
+.whereinfo{margin:26px 0 0;padding:16px 18px;border-radius:16px;background:var(--paper);border:1px solid var(--rule);font-size:14px;line-height:1.5;color:var(--muted)}
+.whereinfo h2{font:700 16px/1.3 var(--display);color:var(--ink);margin:0 0 6px}
+.whereinfo p{margin:0 0 8px}
+.whereinfo ol{margin:0 0 8px;padding-left:20px}
+.whereinfo li{margin:2px 0}
+.whereinfo b{color:var(--ink)}
 .list-tools .act[disabled]{opacity:.4;cursor:default}
+.syncbox{border:1px solid var(--rule);border-radius:18px;padding:18px;margin:0 0 18px;background:var(--paper)}
+.syncbox h2{font:700 19px/1.25 var(--display);margin:0 0 6px}
+.syncbox p{margin:0 0 12px;color:var(--muted);font-size:14px;line-height:1.45}
+.syncbox .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.syncbox input{flex:1 1 180px;height:44px;border:1px solid var(--rule);border-radius:12px;padding:0 12px;background:var(--screen);color:var(--ink);font:600 16px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}
+.synccode{font:800 clamp(22px,6vw,30px)/1.2 ui-monospace,monospace;letter-spacing:.06em;margin:4px 0 12px;user-select:all}
+.syncbox .or{margin:14px 0 8px;font-weight:600;color:var(--ink)}
+.syncbox .warnline{color:var(--critic)}
+.syncstate{font-size:13px;color:var(--muted);margin:-8px 0 14px}
 .list-tools svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .lead-s{font-size:18px;color:#C9CBD1;max-width:52ch;margin:0 0 20px}
 .sub-h{font:700 18px var(--display);margin:28px 0 10px}
@@ -308,7 +324,7 @@ select.mini{height:32px;border:1px solid var(--rule);border-radius:8px;backgroun
   </div>
   <p class="demo" id="demoNote" hidden></p>
   <main id="main"></main>
-  <footer style="font-size:12px;color:var(--muted);padding:0 0 28px;max-width:70ch">This product uses the TMDB API but is not endorsed or certified by TMDB. Ratings belong to their respective sites; each source name links to the original page. <span id="ver">v2026-11-24.1</span></footer>
+  <footer style="font-size:12px;color:var(--muted);padding:0 0 28px;max-width:70ch">This product uses the TMDB API but is not endorsed or certified by TMDB. Ratings belong to their respective sites; each source name links to the original page. <span id="ver">v2026-11-24.3</span></footer>
 </div>
 
 <div class="scrim" id="scrim"></div>
@@ -407,6 +423,22 @@ const T = {
     trending:"Esta semana:", myList:"Mi lista", addToList:"Añadir a mi lista", inList:"En mi lista", addedToList:"Añadida a Mi lista", removedFromList:"Quitada de Mi lista",
     share:"Compartir", linkCopied:"Enlace copiado", shareText:(ti,y,sc)=>`${ti}${y ? " ("+y+")" : ""}: ${sc}/10 en Critic AVG`,
     listEmpty:"Todavía no has guardado ninguna película. Abre una y pulsa «Añadir a mi lista», o importa una lista que ya tengas.", remove:"Quitar",
+    whereTitle:"¿Dónde se guarda mi lista?",
+    whereText:"Las películas que guardas se quedan dentro de tu propio dispositivo, en una pequeña memoria que crea el navegador o la app de Android. No se guardan en ningún servidor externo. Por eso la lista del navegador y la del móvil son distintas.",
+    whereHow:"Si quieres sincronizar tus favoritos del navegador con los de tu móvil:",
+    whereStep1:"Aquí, pulsa <b>Sincronizar</b> y luego <b>Crear código</b>.",
+    whereStep2:"En el otro dispositivo, abre <b>Mi lista</b>, pulsa <b>Sincronizar</b> y escribe ese código.",
+    whereDone:"Listo: lo que guardes o quites en uno aparecerá en el otro. Al sincronizar, la lista también se guarda en el servidor de Critic AVG, protegida por tu código.",
+    whereSynced:"Esta lista ya está sincronizada: lo que guardes o quites aquí aparecerá en tus otros dispositivos. Para ello también se guarda en el servidor de Critic AVG, protegida por tu código.",
+    syncBtn:"Sincronizar", syncTitle:"Tu lista en todos tus dispositivos",
+    syncIntro:"Crea un código y escríbelo en tus otros dispositivos (la app, otro navegador, otro ordenador). Lo que guardes o quites en uno aparecerá en todos.",
+    syncCreate:"Crear código", syncHave:"¿Ya tienes un código?", syncConnect:"Conectar", syncPlaceholder:"XXXX-XXXX-XXXX",
+    syncLinked:"Esta lista está sincronizada con el código", syncCopy:"Copiar", syncShare:"Compartir", syncUnlink:"Desconectar este dispositivo",
+    syncCopied:"Código copiado", syncConnected:"Lista sincronizada", syncUnlinked:"Este dispositivo ya no se sincroniza. Tu lista se queda aquí.",
+    syncNotFound:"Ese código no existe. Revísalo.", syncBadCode:"El código tiene 12 letras y números.", syncOff:"La sincronización aún no está activada en el servidor.",
+    syncFail:"No se ha podido sincronizar ahora. Se reintentará.", syncTreat:"Guarda el código como una contraseña: quien lo tenga puede ver y cambiar tu lista.",
+    syncState:w=>`Sincronizada ${w}`, syncNever:"pendiente de sincronizar", ago:s=>s<60?"ahora mismo":s<3600?`hace ${Math.round(s/60)} min`:s<86400?`hace ${Math.round(s/3600)} h`:`hace ${Math.round(s/86400)} días`,
+    syncShareText:c=>`Mi código de Critic AVG para sincronizar Mi lista: ${c}`,
     exportList:"Exportar", importList:"Importar", exportWhere:"¿Dónde quieres guardar tu lista?", exported:"Lista exportada",
     importing:n=>`Importando ${n} películas…`, imported:(a,d,m)=>[`${a} añadidas`, d?`${d} ya estaban`:"", m?`${m} no encontradas`:""].filter(Boolean).join(" · "),
     importBad:"No se ha podido leer ese archivo. Usa una lista exportada desde Critic AVG o la de Letterboxd (.csv).",
@@ -450,6 +482,22 @@ const T = {
     trending:"This week:", myList:"My list", addToList:"Add to my list", inList:"In my list", addedToList:"Added to My list", removedFromList:"Removed from My list",
     share:"Share", linkCopied:"Link copied", shareText:(ti,y,sc)=>`${ti}${y ? " ("+y+")" : ""}: ${sc}/10 on Critic AVG`,
     listEmpty:"You haven't saved any films yet. Open one and tap \u201cAdd to my list\u201d, or import a list you already have.", remove:"Remove",
+    whereTitle:"Where is my list kept?",
+    whereText:"The films you save stay on your own device, in a small memory that your browser or the Android app creates. They aren't kept on any outside server. That's why your browser's list and your phone's list are different.",
+    whereHow:"To sync the favourites in your browser with the ones on your phone:",
+    whereStep1:"Here, tap <b>Sync</b>, then <b>Create code</b>.",
+    whereStep2:"On the other device, open <b>My list</b>, tap <b>Sync</b> and type that code.",
+    whereDone:"Done: what you save or remove on one shows up on the other. Once synced, the list is also kept on the Critic AVG server, protected by your code.",
+    whereSynced:"This list is synced: what you save or remove here shows up on your other devices. For that it's also kept on the Critic AVG server, protected by your code.",
+    syncBtn:"Sync", syncTitle:"Your list on all your devices",
+    syncIntro:"Create a code and type it on your other devices (the app, another browser, another computer). What you save or remove on one shows up on all of them.",
+    syncCreate:"Create code", syncHave:"Already have a code?", syncConnect:"Connect", syncPlaceholder:"XXXX-XXXX-XXXX",
+    syncLinked:"This list is synced with the code", syncCopy:"Copy", syncShare:"Share", syncUnlink:"Stop syncing this device",
+    syncCopied:"Code copied", syncConnected:"List synced", syncUnlinked:"This device no longer syncs. Your list stays here.",
+    syncNotFound:"That code doesn't exist. Check it.", syncBadCode:"The code has 12 letters and numbers.", syncOff:"Sync isn't switched on on the server yet.",
+    syncFail:"Couldn't sync right now. Will try again.", syncTreat:"Keep the code like a password: anyone with it can see and change your list.",
+    syncState:w=>`Synced ${w}`, syncNever:"waiting to sync", ago:s=>s<60?"just now":s<3600?`${Math.round(s/60)} min ago`:s<86400?`${Math.round(s/3600)} h ago`:`${Math.round(s/86400)} days ago`,
+    syncShareText:c=>`My Critic AVG code to sync My list: ${c}`,
     exportList:"Export", importList:"Import", exportWhere:"Where do you want to save your list?", exported:"List exported",
     importing:n=>`Importing ${n} films…`, imported:(a,d,m)=>[`${a} added`, d?`${d} already there`:"", m?`${m} not found`:""].filter(Boolean).join(" · "),
     importBad:"Couldn't read that file. Use a list exported from Critic AVG, or your Letterboxd one (.csv).",
@@ -574,20 +622,22 @@ function streamNames(f, cc){
   const p = (f.providers || {})[cc] || {};
   return [...new Set([...(p.flatrate || []), ...(p.free || [])].map(x => x.name))];
 }
-function saveList(list){
+function saveList(list, fromSync){
   store.set("list", list);
+  if(!fromSync) scheduleSync();
   const n = list.length, c = $("#listCount");
   if(c){ c.hidden = !n; c.textContent = n; }
   syncRunner(list);
 }
 function listEntryFor(f){
+  const now = Date.now();
   return { id: f.id, title: f.title, year: f.year, poster: f.poster || null, score: compute().avg, region,
-           known: streamNames(f, region), fresh: [], savedAt: Date.now() };
+           known: streamNames(f, region), fresh: [], savedAt: now, t: now };
 }
 async function toggleList(){
   if(!film) return;
   let list = getList();
-  if(inList(film.id)){ list = list.filter(x => x.id !== film.id); toast(t("removedFromList")); }
+  if(inList(film.id)){ list = list.filter(x => x.id !== film.id); markDeleted(film.id); toast(t("removedFromList")); }
   else {
     list = [listEntryFor(film), ...list]; toast(t("addedToList"));
     saveSnapshot();
@@ -635,10 +685,13 @@ function renderList(){
       <div class="list-head">
         <h1>${t("myList")}</h1>
         <div class="list-tools">
+          <button class="act${SYNC.code ? " on" : ""}" data-listact="sync" aria-expanded="${syncOpen}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.5 6.2M3 12a9 9 0 0 1 15.5-6.2M18.5 2v4h-4M5.5 22v-4h4"/></svg>${t("syncBtn")}</button>
           <button class="act" data-listact="import"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m0 12-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>${t("importList")}</button>
           <button class="act" data-listact="export"${list.length ? "" : " disabled"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0-12-4 4m4-4 4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>${t("exportList")}</button>
         </div>
       </div>
+      ${SYNC.code ? `<p class="syncstate">${t("syncState", store.get("syncAt", 0) ? t("ago", Math.max(0, (Date.now() - store.get("syncAt", 0)) / 1000)) : t("syncNever"))}</p>` : ""}
+      ${syncOpen ? syncBoxHTML() : ""}
       <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" hidden>
       ${!list.length ? `<p class="lead-s">${t("listEmpty")}</p>` : `
       <ul class="mylist">
@@ -655,8 +708,108 @@ function renderList(){
       </ul>
       <p class="coverage">${IS_APP ? t("alertsOnApp") : t("alertsOnWeb")}</p>
       <p class="coverage">${t("listFileNote")}</p>`}
+      <aside class="whereinfo">
+        <h2>${t("whereTitle")}</h2>
+        <p>${t("whereText")}</p>
+        ${SYNC.code ? `<p>${t("whereSynced")}</p>` : `<p>${t("whereHow")}</p>
+        <ol><li>${t("whereStep1")}</li><li>${t("whereStep2")}</li></ol>
+        <p>${t("whereDone")}</p>`}
+      </aside>
     </section>`;
   if(list.length && navigator.onLine) checkAvailability(false);
+  if(!quietRender) syncNow();
+}
+
+/* ---------- Sync My list across devices (a code, kept on the server's KV) ----------
+   Every film carries t (when it was added) and every removal leaves a mark in "listDeleted" with its time,
+   so merging two lists keeps the newest change on each film. */
+const SYNC = { code: store.get("syncCode", "") };
+let syncOpen = false, syncTimer = null, syncBusy = false, syncAgain = false, syncServerOff = null;
+const coreItem = x => ({ id: x.id, title: x.title, year: x.year || "", poster: x.poster || null, score: x.score ?? null, region: x.region || "", t: x.t || x.savedAt || 0 });
+function markDeleted(id){ const d = store.get("listDeleted", {}); d[id] = Date.now(); store.set("listDeleted", d); }
+function mergeLists(local, localDel, remote){
+  const del = { ...(remote.deleted || {}) };
+  for(const [id, ts] of Object.entries(localDel || {})) del[id] = Math.max(del[id] || 0, ts);
+  const out = new Map(), mine = new Map(local.map(x => [x.id, x]));
+  for(const r of remote.list || []) out.set(r.id, { ...r, known: null, fresh: [], savedAt: r.t });   // new here: no "now streaming" baseline yet
+  for(const l of local){
+    const r = out.get(l.id), lt = l.t || l.savedAt || 0;
+    out.set(l.id, { ...(r || {}), ...l, t: Math.max(lt, r?.t || 0), score: l.score ?? r?.score ?? null, poster: l.poster || r?.poster || null });
+  }
+  const old = Date.now() - 180 * 864e5;
+  for(const id of Object.keys(del)) if(del[id] < old) delete del[id];
+  const list = [...out.values()].filter(x => !(del[x.id] && del[x.id] >= x.t)).sort((a, b) => b.t - a.t);
+  return { list, deleted: del };
+}
+const listSig = (list, del) => JSON.stringify([list.map(coreItem).map(x => [x.id, x.t]).sort((a, b) => a[0] - b[0]), Object.entries(del || {}).sort()]);
+async function syncCall(method, body){
+  const r = await fetch(`${API}/api/sync${SYNC.code ? "?code=" + encodeURIComponent(SYNC.code) : ""}`,
+    { method, headers: body ? { "content-type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if(j.error === "sync-off") syncServerOff = true;
+  return { status: r.status, ...j };
+}
+function scheduleSync(){ if(!SYNC.code) return; clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); }
+async function syncNow(){
+  if(!SYNC.code || !API || !navigator.onLine) return;
+  if(syncBusy){ syncAgain = true; return; }
+  syncBusy = true;
+  try{
+    for(let i = 0; i < 3; i++){
+      const remote = await syncCall("GET");
+      if(remote.status === 404){ toast(t("syncNotFound")); break; }
+      if(remote.status !== 200) throw new Error(remote.error || remote.status);
+      const m = mergeLists(getList(), store.get("listDeleted", {}), remote);
+      store.set("listDeleted", m.deleted);
+      saveList(m.list, true);
+      if(listSig(m.list, m.deleted) !== listSig(remote.list, remote.deleted)){
+        const put = await syncCall("PUT", { list: m.list.map(coreItem), deleted: m.deleted, rev: remote.rev });
+        if(put.status === 409) continue;                 // another device synced meanwhile: merge again
+        if(put.status !== 200) throw new Error(put.error || put.status);
+      }
+      store.set("syncAt", Date.now());
+      break;
+    }
+    if(location.hash === "#list" && !document.activeElement?.closest?.(".syncbox")) renderListQuiet();
+  }catch(_){ if(syncOpen) toast(t("syncFail")); }
+  finally{ syncBusy = false; if(syncAgain){ syncAgain = false; scheduleSync(); } }
+}
+let quietRender = false;
+function renderListQuiet(){ quietRender = true; renderList(); quietRender = false; }
+function syncBoxHTML(){
+  if(syncServerOff) return `<section class="syncbox"><h2>${t("syncTitle")}</h2><p class="warnline">${t("syncOff")}</p></section>`;
+  if(SYNC.code) return `<section class="syncbox">
+      <h2>${t("syncTitle")}</h2><p>${t("syncLinked")}</p>
+      <div class="synccode">${esc(SYNC.code)}</div>
+      <div class="row"><button class="act" data-sync="copy">${t("syncCopy")}</button><button class="act" data-sync="share">${t("syncShare")}</button><button class="act" data-sync="unlink">${t("syncUnlink")}</button></div>
+      <p style="margin:12px 0 0">${t("syncTreat")}</p></section>`;
+  return `<section class="syncbox">
+      <h2>${t("syncTitle")}</h2><p>${t("syncIntro")}</p>
+      <div class="row"><button class="act on" data-sync="create">${t("syncCreate")}</button></div>
+      <p class="or">${t("syncHave")}</p>
+      <div class="row"><input id="syncCodeIn" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${t("syncPlaceholder")}" aria-label="${t("syncHave")}"><button class="act" data-sync="connect">${t("syncConnect")}</button></div>
+      <p style="margin:12px 0 0">${t("syncTreat")}</p></section>`;
+}
+async function syncAction(what){
+  if(what === "create"){
+    const r = await syncCall("POST", { list: getList().map(coreItem), deleted: store.get("listDeleted", {}) }).catch(() => ({}));
+    if(!r.code){ toast(syncServerOff ? t("syncOff") : t("syncFail")); renderList(); return; }
+    SYNC.code = r.code; store.set("syncCode", r.code); store.set("syncAt", Date.now()); toast(t("syncConnected")); renderList();
+  } else if(what === "connect"){
+    const code = ($("#syncCodeIn")?.value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if(code.length !== 12){ toast(t("syncBadCode")); return; }
+    SYNC.code = code.match(/.{4}/g).join("-");
+    const r = await syncCall("GET").catch(() => ({}));
+    if(r.status !== 200){ SYNC.code = ""; toast(r.status === 404 ? t("syncNotFound") : syncServerOff ? t("syncOff") : t("syncFail")); renderList(); return; }
+    store.set("syncCode", SYNC.code); await syncNow(); toast(t("syncConnected")); renderList();
+  } else if(what === "copy"){
+    try{ await navigator.clipboard.writeText(SYNC.code); toast(t("syncCopied")); }catch(_){ toast(SYNC.code); }
+  } else if(what === "share"){
+    const text = t("syncShareText", SYNC.code);
+    try{ if(IS_APP && PLUG.Share) await PLUG.Share.share({ text }); else if(navigator.share) await navigator.share({ text }); else { await navigator.clipboard.writeText(SYNC.code); toast(t("syncCopied")); } }catch(_){}
+  } else if(what === "unlink"){
+    SYNC.code = ""; store.set("syncCode", ""); store.set("syncAt", 0); toast(t("syncUnlinked")); renderList();
+  }
 }
 
 /* ---------- Export / import My list ----------
@@ -738,7 +891,7 @@ async function importListFile(f){
     if(have.has(id)){ dup++; continue; }
     have.add(id); added++;
     list.push({ id, title: title || "?", year: year || "", poster: poster || null, score: x.score ?? null,
-                region: x.region || region, known: null, fresh: [], savedAt: x.savedAt || Date.now() });
+                region: x.region || region, known: null, fresh: [], savedAt: x.savedAt || Date.now(), t: Date.now() });
   }
   saveList(list);
   if(location.hash === "#list") renderList();
@@ -768,7 +921,7 @@ function setupApp(){
       if(document.querySelector(".sheet.on")){ closeSheets(); return; }
       if(location.hash && location.hash !== "#") history.back(); else PLUG.App.exitApp();
     });
-    PLUG.App.addListener("resume", () => checkAvailability(true));
+    PLUG.App.addListener("resume", () => { checkAvailability(true); syncNow(); });
   }
   syncRunner();
 }
@@ -1155,6 +1308,7 @@ q.addEventListener("keydown", e => {
   } else if(e.key === "Escape"){ box.hidden = true; }
 });
 function pick(id){ box.hidden = true; q.value = ""; q.blur(); location.hash = "film-" + id; }
+document.addEventListener("keydown", e => { if(e.key === "Enter" && e.target.id === "syncCodeIn"){ e.preventDefault(); syncAction("connect"); } });
 document.addEventListener("change", e => {
   if(e.target.id === "importFile" && e.target.files[0]){ importListFile(e.target.files[0]); e.target.value = ""; }
 });
@@ -1200,9 +1354,13 @@ document.addEventListener("click", e => {
   if(e.target.closest("#listBtn")){ toggleList(); return; }
   if(e.target.closest("#shareBtn")){ shareFilm(); return; }
   const la = e.target.closest("[data-listact]");
-  if(la){ if(la.dataset.listact === "export") exportList(); else $("#importFile")?.click(); return; }
+  if(la){ const a = la.dataset.listact;
+    if(a === "export") exportList(); else if(a === "sync"){ syncOpen = !syncOpen; renderList(); if(syncOpen) $(".syncbox")?.scrollIntoView({ block: "nearest", behavior: "smooth" }); } else $("#importFile")?.click();
+    return; }
   const del = e.target.closest("[data-del]");
-  if(del){ saveList(getList().filter(x => x.id !== +del.dataset.del)); renderList(); return; }
+  if(del){ markDeleted(+del.dataset.del); saveList(getList().filter(x => x.id !== +del.dataset.del)); renderList(); return; }
+  const sy = e.target.closest("[data-sync]");
+  if(sy){ syncAction(sy.dataset.sync); return; }
   const ib = e.target.closest("[data-install]");
   if(ib){ doInstall(ib.dataset.install, ib); return; }
   const el = e.target.closest("[data-film],[data-cc],[data-preset],[data-lang],[data-close],#demoSet,#openWeights,#openSettings,#scrim");
@@ -1249,6 +1407,9 @@ route();
 saveList(getList());          // shows the count on the My list button
 setupApp();
 setTimeout(() => checkAvailability(false), 2500);
+setTimeout(syncNow, 1500);
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") syncNow(); });
+window.addEventListener("online", () => syncNow());
 if("serviceWorker" in navigator && location.protocol === "https:" && !IS_APP){ // the store app ships its files inside
   try{
     navigator.serviceWorker.register("sw.js").then(reg => reg.update()).catch(() => {});
