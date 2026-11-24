@@ -255,6 +255,11 @@ select.mini{height:32px;border:1px solid var(--rule);border-radius:8px;backgroun
 .picon:hover{border-color:var(--gold)}
 .listpage{padding:4vh 0 10vh;max-width:760px}
 .listpage h1{font:800 clamp(30px,7vw,52px)/1.1 var(--display);margin:0 0 16px;letter-spacing:-.02em}
+.list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px}
+.list-head h1{margin:0}
+.list-tools{display:flex;gap:8px}
+.list-tools .act[disabled]{opacity:.4;cursor:default}
+.list-tools svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .lead-s{font-size:18px;color:#C9CBD1;max-width:52ch;margin:0 0 20px}
 .sub-h{font:700 18px var(--display);margin:28px 0 10px}
 .mylist{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:10px}
@@ -303,7 +308,7 @@ select.mini{height:32px;border:1px solid var(--rule);border-radius:8px;backgroun
   </div>
   <p class="demo" id="demoNote" hidden></p>
   <main id="main"></main>
-  <footer style="font-size:12px;color:var(--muted);padding:0 0 28px;max-width:70ch">This product uses the TMDB API but is not endorsed or certified by TMDB. Ratings belong to their respective sites; each source name links to the original page. <span id="ver">v2026-11-14.5</span></footer>
+  <footer style="font-size:12px;color:var(--muted);padding:0 0 28px;max-width:70ch">This product uses the TMDB API but is not endorsed or certified by TMDB. Ratings belong to their respective sites; each source name links to the original page. <span id="ver">v2026-11-24.1</span></footer>
 </div>
 
 <div class="scrim" id="scrim"></div>
@@ -324,12 +329,14 @@ select.mini{height:32px;border:1px solid var(--rule);border-radius:8px;backgroun
       <label data-i="language">Idioma</label>
       <div class="seg" id="langSeg"><button data-lang="es">Español</button><button data-lang="en">English</button></div>
     </div>
+    <div id="serverBox">
     <div class="field">
       <label for="apiUrl" data-i="apiUrl">Dirección del servidor de datos</label>
       <input id="apiUrl" type="url" inputmode="url" placeholder="https://cinescore-api.tu-cuenta.workers.dev">
       <small data-i="apiHelp">Déjalo vacío para usar los datos de ejemplo. Con tu servidor desplegado, las notas, edades y plataformas son reales.</small>
     </div>
     <button class="iconbtn primary" id="saveApi" data-i="saveApi">Guardar servidor</button>
+    </div>
     <div class="field" style="margin-top:26px"><label data-i="installApp">Instalar app</label><div id="installSettings"></div></div>
   </div>
 </section>
@@ -382,7 +389,7 @@ const T = {
     critics:"Crítica", audience:"Público", average:"Nota Critic AVG", outOf:"de 10",
     coverage:(n,t)=>`Calculada con ${n} de ${t} fuentes.`, noScore:"Sin notas suficientes",
     sourcesH:"Fuentes", sourcesSub:"Todas las notas pasadas a escala de 10.",
-    weightShare:p=>`${p}% de la media`, unused:"No cuenta", noData:"Sin nota", add:"Añadir", loading:"Buscando…", manual:"a mano",
+    weightShare:p=>`${p}% de la media`, unused:"No cuenta", noData:"Sin nota", busy:"Saturado ahora · se reintentará", add:"Añadir", loading:"Buscando…", manual:"a mano",
     save:"Guardar", clear:"Quitar",
     ageH:"Edad recomendada", region:"País", ageNone:"Sin calificación registrada para este país.",
     ageNote:"PEGI califica videojuegos; las películas se califican en cada país (en España, el ICAA).",
@@ -399,7 +406,11 @@ const T = {
     noResults:"Sin resultados para esa búsqueda.",
     trending:"Esta semana:", myList:"Mi lista", addToList:"Añadir a mi lista", inList:"En mi lista", addedToList:"Añadida a Mi lista", removedFromList:"Quitada de Mi lista",
     share:"Compartir", linkCopied:"Enlace copiado", shareText:(ti,y,sc)=>`${ti}${y ? " ("+y+")" : ""}: ${sc}/10 en Critic AVG`,
-    listEmpty:"Todavía no has guardado ninguna película. Abre una y pulsa «Añadir a mi lista».", remove:"Quitar",
+    listEmpty:"Todavía no has guardado ninguna película. Abre una y pulsa «Añadir a mi lista», o importa una lista que ya tengas.", remove:"Quitar",
+    exportList:"Exportar", importList:"Importar", exportWhere:"¿Dónde quieres guardar tu lista?", exported:"Lista exportada",
+    importing:n=>`Importando ${n} películas…`, imported:(a,d,m)=>[`${a} añadidas`, d?`${d} ya estaban`:"", m?`${m} no encontradas`:""].filter(Boolean).join(" · "),
+    importBad:"No se ha podido leer ese archivo. Usa una lista exportada desde Critic AVG o la de Letterboxd (.csv).",
+    listFileNote:"El archivo .csv también se puede importar en Letterboxd (Settings → Import & Export).",
     newOn:x=>`Ya en ${x}`, newOnPlatforms:n=>n === 1 ? "Una película de tu lista ya está en streaming" : `${n} películas de tu lista ya están en streaming`,
     alertsOnApp:"Te avisaremos cuando una película de tu lista llegue a una plataforma de streaming.", alertsOnWeb:"Las novedades de streaming se marcan aquí cada vez que abres Mi lista. Con la app de Android, además, te llega un aviso.",
     offlineTitle:"Sin conexión", offlineBody:"No hay internet ahora mismo. Puedes ver Mi lista y las últimas películas que abriste.", recentSaved:"Vistas recientemente",
@@ -421,7 +432,7 @@ const T = {
     critics:"Critics", audience:"Audience", average:"Critic AVG", outOf:"out of 10",
     coverage:(n,t)=>`Based on ${n} of ${t} sources.`, noScore:"Not enough scores",
     sourcesH:"Sources", sourcesSub:"Every score converted to a 10-point scale.",
-    weightShare:p=>`${p}% of the average`, unused:"Not counted", noData:"No score", add:"Add", loading:"Looking…", manual:"by hand",
+    weightShare:p=>`${p}% of the average`, unused:"Not counted", noData:"No score", busy:"Busy right now · will retry", add:"Add", loading:"Looking…", manual:"by hand",
     save:"Save", clear:"Remove",
     ageH:"Age rating", region:"Country", ageNone:"No rating on record for this country.",
     ageNote:"PEGI rates video games; films are rated by each country's board (in Spain, the ICAA).",
@@ -438,7 +449,11 @@ const T = {
     noResults:"No results for that search.",
     trending:"This week:", myList:"My list", addToList:"Add to my list", inList:"In my list", addedToList:"Added to My list", removedFromList:"Removed from My list",
     share:"Share", linkCopied:"Link copied", shareText:(ti,y,sc)=>`${ti}${y ? " ("+y+")" : ""}: ${sc}/10 on Critic AVG`,
-    listEmpty:"You haven't saved any films yet. Open one and tap \u201cAdd to my list\u201d.", remove:"Remove",
+    listEmpty:"You haven't saved any films yet. Open one and tap \u201cAdd to my list\u201d, or import a list you already have.", remove:"Remove",
+    exportList:"Export", importList:"Import", exportWhere:"Where do you want to save your list?", exported:"List exported",
+    importing:n=>`Importing ${n} films…`, imported:(a,d,m)=>[`${a} added`, d?`${d} already there`:"", m?`${m} not found`:""].filter(Boolean).join(" · "),
+    importBad:"Couldn't read that file. Use a list exported from Critic AVG, or your Letterboxd one (.csv).",
+    listFileNote:"The .csv file can also be imported into Letterboxd (Settings → Import & Export).",
     newOn:x=>`Now on ${x}`, newOnPlatforms:n=>n === 1 ? "A film on your list is now streaming" : `${n} films on your list are now streaming`,
     alertsOnApp:"We'll let you know when a film on your list arrives on a streaming platform.", alertsOnWeb:"New streaming arrivals are marked here each time you open My list. The Android app also sends you a notification.",
     offlineTitle:"You're offline", offlineBody:"There's no internet right now. You can still see My list and the films you opened recently.", recentSaved:"Recently viewed",
@@ -482,7 +497,8 @@ const IS_APP = !!(window.Capacitor && window.Capacitor.isNativePlatform && windo
 const PLUG = (window.Capacitor && window.Capacitor.Plugins) || {};
 const DEFAULT_API = window.CRITICAVG_API || (window.CINESCORE_SAME_ORIGIN ? location.origin : "");
 const SITE_URL = (window.CRITICAVG_SITE || window.CRITICAVG_API || location.origin).replace(/\/$/, "");
-let API = store.get("api", "") || DEFAULT_API;
+let API = DEFAULT_API || store.get("api", "");
+if(DEFAULT_API){ store.set("api", ""); const sb = document.getElementById("serverBox"); if(sb) sb.hidden = true; }
 let weights = Object.assign({}, PRESETS.balanced, store.get("weights", {}));
 let region = store.get("region2", "ES"); // Spain by default; a country picked by hand is remembered
 let film = null;           // current film payload
@@ -602,8 +618,9 @@ async function checkAvailability(force){
   for(const item of list){
     try{
       const r = await api(`/api/providers?id=${item.id}&region=${item.region || region}`);
+      const baseline = item.known == null;            // just imported: learn what's on now, announce nothing
       const known = new Set(item.known || []);
-      const added = (r.stream || []).filter(n => !known.has(n));
+      const added = baseline ? [] : (r.stream || []).filter(n => !known.has(n));
       if(added.length){ item.fresh = [...new Set([...(item.fresh || []), ...added])]; news.push(item.title); }
       item.known = [...new Set([...known, ...(r.stream || [])])];
     }catch(_){}
@@ -615,7 +632,14 @@ function renderList(){
   const list = getList();
   $("#main").innerHTML = `
     <section class="listpage">
-      <h1>${t("myList")}</h1>
+      <div class="list-head">
+        <h1>${t("myList")}</h1>
+        <div class="list-tools">
+          <button class="act" data-listact="import"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m0 12-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>${t("importList")}</button>
+          <button class="act" data-listact="export"${list.length ? "" : " disabled"}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0-12-4 4m4-4 4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>${t("exportList")}</button>
+        </div>
+      </div>
+      <input type="file" id="importFile" accept=".csv,.json,text/csv,application/json" hidden>
       ${!list.length ? `<p class="lead-s">${t("listEmpty")}</p>` : `
       <ul class="mylist">
         ${list.map(x => `
@@ -629,9 +653,97 @@ function renderList(){
           <button class="li-del" data-del="${x.id}" aria-label="${t("remove")}: ${esc(x.title)}">✕</button>
         </li>`).join("")}
       </ul>
-      <p class="coverage">${IS_APP ? t("alertsOnApp") : t("alertsOnWeb")}</p>`}
+      <p class="coverage">${IS_APP ? t("alertsOnApp") : t("alertsOnWeb")}</p>
+      <p class="coverage">${t("listFileNote")}</p>`}
     </section>`;
   if(list.length && navigator.onLine) checkAvailability(false);
+}
+
+/* ---------- Export / import My list ----------
+   One .csv file does both jobs: Critic AVG reads it back, and Letterboxd imports it (it reads tmdbID, Title
+   and Year and ignores the rest). Letterboxd's own watchlist.csv can be imported too. */
+const csvCell = v => { const s = v == null ? "" : String(v); return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+function listToCSV(list){
+  const head = ["tmdbID", "Title", "Year", "CriticAVG", "Region", "Added", "Poster"];
+  const rows = list.map(x => [x.id, x.title, x.year || "", x.score != null ? (Math.round(x.score * 10) / 10).toFixed(1) : "",
+                              x.region || "", x.savedAt ? new Date(x.savedAt).toISOString().slice(0, 10) : "", x.poster || ""]);
+  return "\ufeff" + [head, ...rows].map(r => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+}
+function parseCSV(text){
+  const rows = []; let row = [], cell = "", q = false;
+  text = text.replace(/^\ufeff/, "");
+  for(let i = 0; i < text.length; i++){
+    const c = text[i];
+    if(q){ if(c === '"'){ if(text[i + 1] === '"'){ cell += '"'; i++; } else q = false; } else cell += c; }
+    else if(c === '"') q = true;
+    else if(c === ","){ row.push(cell); cell = ""; }
+    else if(c === "\n" || c === "\r"){ if(c === "\r" && text[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
+    else cell += c;
+  }
+  if(cell || row.length){ row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim()));
+}
+/** Reads a Critic AVG .csv/.json or a Letterboxd .csv into [{id?, title, year, score, region, savedAt, poster}]. */
+function readListFile(text, name){
+  if(/\.json$/i.test(name) || /^\s*[\[{]/.test(text)){
+    const j = JSON.parse(text), arr = Array.isArray(j) ? j : (j.list || []);
+    return arr.map(x => ({ id: +x.id || null, title: x.title, year: x.year, score: x.score ?? null, region: x.region, savedAt: x.savedAt, poster: x.poster }));
+  }
+  const rows = parseCSV(text); if(rows.length < 2) return [];
+  const h = rows[0].map(c => c.trim().toLowerCase().replace(/[^a-z0-9]/g, ""));
+  const col = (...names) => h.findIndex(c => names.includes(c));
+  const ci = col("tmdbid", "tmdb"), ct = col("title", "name"), cy = col("year"), cs = col("criticavg"), cr = col("region"), ca = col("added", "date"), cp = col("poster");
+  if(ci < 0 && ct < 0) return [];
+  return rows.slice(1).map(r => ({
+    id: ci >= 0 ? (+r[ci] || null) : null, title: ct >= 0 ? r[ct].trim() : "", year: cy >= 0 ? (r[cy] || "").trim() : "",
+    score: cs >= 0 && r[cs] !== "" && !isNaN(+r[cs]) ? +r[cs] : null, region: cr >= 0 ? (r[cr] || "").trim() : "",
+    savedAt: ca >= 0 && Date.parse(r[ca]) ? Date.parse(r[ca]) : null, poster: cp >= 0 ? (r[cp] || "").trim() || null : null,
+  })).filter(x => x.id || x.title);
+}
+async function exportList(){
+  const list = getList(); if(!list.length) return;
+  const csv = listToCSV(list), file = `critic-avg-${lang === "es" ? "mi-lista" : "my-list"}-${new Date().toISOString().slice(0, 10)}.csv`;
+  if(IS_APP && PLUG.Filesystem && PLUG.Share){
+    // In the app: write the file, then open Android's share sheet so the person picks where it goes (Drive, Files, mail…)
+    try{
+      const w = await PLUG.Filesystem.writeFile({ path: file, data: csv, directory: "CACHE", encoding: "utf8" });
+      await PLUG.Share.share({ title: t("myList"), files: [w.uri], dialogTitle: t("exportWhere") });
+    }catch(_){ /* closed the sheet */ }
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = file; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast(t("exported"));
+}
+async function importListFile(f){
+  let items;
+  try{ items = readListFile(await f.text(), f.name); }catch(_){ items = []; }
+  if(!items.length){ toast(t("importBad")); return; }
+  items = items.slice(0, 500);
+  toast(t("importing", items.length));
+  const list = getList(), have = new Set(list.map(x => x.id));
+  let added = 0, dup = 0, missing = 0;
+  for(const x of items){
+    let id = x.id, title = x.title, year = x.year, poster = x.poster;
+    if(!id && API){ // Letterboxd lists have no TMDB id: find the film by its title and year
+      try{
+        const res = await searchFilms(title);
+        const hit = res.find(r => String(r.year) === String(year)) || (year ? null : res[0]);
+        if(hit){ id = hit.id; title = hit.title || title; year = year || hit.year; poster = poster || hit.poster || null; }
+      }catch(_){}
+    }
+    if(!id){ missing++; continue; }
+    if(have.has(id)){ dup++; continue; }
+    have.add(id); added++;
+    list.push({ id, title: title || "?", year: year || "", poster: poster || null, score: x.score ?? null,
+                region: x.region || region, known: null, fresh: [], savedAt: x.savedAt || Date.now() });
+  }
+  saveList(list);
+  if(location.hash === "#list") renderList();
+  toast(t("imported", added, dup, missing));
+  if(added) checkAvailability(true);
 }
 
 /* ================= store app (Android) ================= */
@@ -641,7 +753,7 @@ function syncRunner(list){
   if(!IS_APP || !PLUG.BackgroundRunner) return;
   try{
     PLUG.BackgroundRunner.dispatchEvent({ label: RUNNER_LABEL, event: "syncList",
-      details: { api: API, lang, list: (list || getList()).map(x => ({ id: x.id, title: x.title, region: x.region || region, known: x.known || [] })) } })
+      details: { api: API, lang, list: (list || getList()).filter(x => x.known != null).map(x => ({ id: x.id, title: x.title, region: x.region || region, known: x.known || [] })) } })
       .catch(() => {});
   }catch(_){}
 }
@@ -830,7 +942,7 @@ function renderScores(first){
     if(isPending){
       val = `<span class="valbtn empty loading"><b>${t("loading")}</b></span>`;
     } else if(n == null){
-      val = `<span class="valbtn empty"><b>${t("noData")}</b></span>`;
+      val = `<span class="valbtn empty"><b>${t("noData")}</b>${(film.busy||[]).includes(s.id) ? `<small>${t("busy")}</small>` : ""}</span>`;
     } else {
       val = `<span class="valbtn" aria-label="${esc(nm(s))}: ${s.fmt(r.value)}${s.unit}"><b>${n.toFixed(1)}</b><small>${s.fmt(r.value)}${s.unit}</small></span>`;
     }
@@ -1043,6 +1155,9 @@ q.addEventListener("keydown", e => {
   } else if(e.key === "Escape"){ box.hidden = true; }
 });
 function pick(id){ box.hidden = true; q.value = ""; q.blur(); location.hash = "film-" + id; }
+document.addEventListener("change", e => {
+  if(e.target.id === "importFile" && e.target.files[0]){ importListFile(e.target.files[0]); e.target.value = ""; }
+});
 document.addEventListener("click", e => { if(!e.target.closest(".search")) box.hidden = true; });
 
 /* ---- routing ---- */
@@ -1084,6 +1199,8 @@ document.addEventListener("click", e => {
   if(e.target.closest("#openList")){ location.hash = "list"; return; }
   if(e.target.closest("#listBtn")){ toggleList(); return; }
   if(e.target.closest("#shareBtn")){ shareFilm(); return; }
+  const la = e.target.closest("[data-listact]");
+  if(la){ if(la.dataset.listact === "export") exportList(); else $("#importFile")?.click(); return; }
   const del = e.target.closest("[data-del]");
   if(del){ saveList(getList().filter(x => x.id !== +del.dataset.del)); renderList(); return; }
   const ib = e.target.closest("[data-install]");
